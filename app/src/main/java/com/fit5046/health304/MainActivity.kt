@@ -11,6 +11,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.fit5046.health304.ui.screens.LoginScreen
+import com.fit5046.health304.ui.screens.RegisterScreen
 import com.fit5046.health304.ui.theme._304HealthTheme
 
 class MainActivity : ComponentActivity() {
@@ -20,10 +25,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             _304HealthTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
+                    AppNavHost(modifier = Modifier.padding(innerPadding))
                 }
             }
         }
@@ -31,17 +33,26 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
+fun AppNavHost(modifier: Modifier = Modifier) {
+    val navController = rememberNavController()
 
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    _304HealthTheme {
-        Greeting("Android")
+    NavHost(
+        navController = navController,
+        startDestination = "login",
+        modifier = modifier
+    ) {
+        composable("login") {
+            LoginScreen(
+                onLoginClick = { _, _ -> /* TODO */},
+                onNavigateToRegister = { navController.navigate("register") },
+                onForgotPassword = { /* TODO */ }
+            )
+        }
+        composable("register") {
+            RegisterScreen(
+                onRegisterClick = { _, _, _ -> /* TODO */ },
+                onNavigateToLogin = { navController.popBackStack() }
+            )
+        }
     }
 }

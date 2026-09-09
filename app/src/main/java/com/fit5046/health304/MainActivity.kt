@@ -19,6 +19,7 @@ import com.fit5046.health304.ui.screens.RegisterScreen
 import com.fit5046.health304.ui.theme._304HealthTheme
 
 import com.fit5046.health304.ui.screens.DataVisualizationScreen
+import com.fit5046.health304.ui.screens.SearchScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -58,6 +59,9 @@ fun AppNavHost(modifier: Modifier = Modifier) {
         }
         composable("visualisation") {
             DataVisualizationScreen()
+        }
+        composable("search") {
+            SearchScreen()
         }
     }
 }

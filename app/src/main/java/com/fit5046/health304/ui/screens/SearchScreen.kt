@@ -15,7 +15,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
-
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,10 +28,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-data class ExerciseItem(
-    val name: String,
-    val category: String,
-    val duration: String,
+data class SearchItem(
+    val title: String,
+    val type: String,
     val description: String
 )
 
@@ -43,46 +41,65 @@ fun SearchScreen() {
         mutableStateOf("")
     }
 
-    var selectedCategory by remember {
+    var selectedType by remember {
         mutableStateOf("All")
     }
 
-    val exercises = listOf(
-        ExerciseItem(
-            name = "Walking",
-            category = "Cardio",
-            duration = "20–30 min",
-            description = "Low-impact activity suitable for most fitness levels."
+    val searchItems = listOf(
+        SearchItem(
+            title = "Mood Journal",
+            type = "Mood",
+            description = "View and manage your recorded mood entries."
         ),
-        ExerciseItem(
-            name = "Jogging",
-            category = "Cardio",
-            duration = "20 min",
-            description = "Moderate cardio exercise to improve endurance."
+        SearchItem(
+            title = "Feeling Happy",
+            type = "Mood",
+            description = "A positive mood record from your recent journal."
         ),
-        ExerciseItem(
-            name = "Bodyweight Squat",
-            category = "Strength",
-            duration = "3 × 12",
-            description = "Simple lower-body strength exercise requiring no equipment."
+        SearchItem(
+            title = "Medication Reminder",
+            type = "Medication",
+            description = "View and manage your medication reminder settings."
         ),
-        ExerciseItem(
-            name = "Stretching",
-            category = "Flexibility",
-            duration = "10–15 min",
-            description = "Gentle stretching routine to support mobility and recovery."
+        SearchItem(
+            title = "Morning Medication",
+            type = "Medication",
+            description = "Medication reminder scheduled for the morning."
+        ),
+        SearchItem(
+            title = "Walking",
+            type = "Exercise",
+            description = "Low-impact exercise suitable for most fitness levels."
+        ),
+        SearchItem(
+            title = "Stretching",
+            type = "Exercise",
+            description = "Gentle activity that supports flexibility and recovery."
+        ),
+        SearchItem(
+            title = "Heart Rate Trend",
+            type = "Health Data",
+            description = "Review your weekly heart rate information."
+        ),
+        SearchItem(
+            title = "Weekly Health Overview",
+            type = "Health Data",
+            description = "View a summary of your recent health trends."
         )
     )
 
-    val filteredExercises = exercises.filter { exercise ->
+    val filteredItems = searchItems.filter { item ->
+
         val matchesSearch =
-            exercise.name.contains(searchText, ignoreCase = true)
+            item.title.contains(searchText, ignoreCase = true) ||
+                    item.type.contains(searchText, ignoreCase = true) ||
+                    item.description.contains(searchText, ignoreCase = true)
 
-        val matchesCategory =
-            selectedCategory == "All" ||
-                    exercise.category == selectedCategory
+        val matchesType =
+            selectedType == "All" ||
+                    item.type == selectedType
 
-        matchesSearch && matchesCategory
+        matchesSearch && matchesType
     }
 
     Column(
@@ -93,7 +110,7 @@ fun SearchScreen() {
     ) {
 
         Text(
-            text = "Exercise Library",
+            text = "Search",
             fontSize = 28.sp,
             fontWeight = FontWeight.Bold,
             color = Color(0xFF1F2937)
@@ -104,7 +121,7 @@ fun SearchScreen() {
         )
 
         Text(
-            text = "Find exercises and health activities",
+            text = "Search across your health information",
             fontSize = 14.sp,
             color = Color.Gray
         )
@@ -120,10 +137,8 @@ fun SearchScreen() {
             },
             modifier = Modifier.fillMaxWidth(),
             placeholder = {
-                Text("Search exercises...")
+                Text("Search health content...")
             },
-
-
             singleLine = true,
             shape = RoundedCornerShape(16.dp)
         )
@@ -136,32 +151,45 @@ fun SearchScreen() {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-
             listOf(
                 "All",
-                "Cardio",
-                "Strength",
-                "Flexibility"
-            ).forEach { category ->
+                "Mood",
+                "Medication",
+                "Exercise"
+            ).forEach { type ->
 
                 FilterChip(
-                    selected = selectedCategory == category,
+                    selected = selectedType == type,
                     onClick = {
-                        selectedCategory = category
+                        selectedType = type
                     },
                     label = {
-                        Text(category)
+                        Text(type)
                     }
                 )
             }
         }
 
         Spacer(
+            modifier = Modifier.height(8.dp)
+        )
+
+        FilterChip(
+            selected = selectedType == "Health Data",
+            onClick = {
+                selectedType = "Health Data"
+            },
+            label = {
+                Text("Health Data")
+            }
+        )
+
+        Spacer(
             modifier = Modifier.height(20.dp)
         )
 
         Text(
-            text = "Recommended Exercises",
+            text = "Search Results",
             fontSize = 18.sp,
             fontWeight = FontWeight.SemiBold
         )
@@ -173,20 +201,16 @@ fun SearchScreen() {
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-
-            items(filteredExercises) { exercise ->
-
-                ExerciseCard(
-                    exercise = exercise
-                )
+            items(filteredItems) { item ->
+                SearchResultCard(item)
             }
         }
     }
 }
 
 @Composable
-private fun ExerciseCard(
-    exercise: ExerciseItem
+private fun SearchResultCard(
+    item: SearchItem
 ) {
 
     Card(
@@ -201,30 +225,18 @@ private fun ExerciseCard(
             modifier = Modifier.padding(18.dp)
         ) {
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-
-                Text(
-                    text = exercise.name,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-
-                Text(
-                    text = exercise.duration,
-                    fontSize = 13.sp,
-                    color = Color.Gray
-                )
-            }
+            Text(
+                text = item.title,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.SemiBold
+            )
 
             Spacer(
-                modifier = Modifier.height(6.dp)
+                modifier = Modifier.height(5.dp)
             )
 
             Text(
-                text = exercise.category,
+                text = item.type,
                 fontSize = 13.sp,
                 color = Color(0xFF6750A4)
             )
@@ -234,7 +246,7 @@ private fun ExerciseCard(
             )
 
             Text(
-                text = exercise.description,
+                text = item.description,
                 fontSize = 14.sp,
                 color = Color.DarkGray
             )

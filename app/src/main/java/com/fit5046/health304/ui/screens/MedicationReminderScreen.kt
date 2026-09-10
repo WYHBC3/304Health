@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -20,6 +22,7 @@ import androidx.compose.material3.TimePickerDialog
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -46,21 +49,21 @@ fun MedicationReminderScreen(
     var medicationName by remember { mutableStateOf("") }
     var reminderEnabled by remember { mutableStateOf(true) }
     var showTimePicker by remember { mutableStateOf(false) }
-    val timePickerState = rememberTimePickerState(
-        initialHour = 8,
-        initialMinute = 0,
-        is24Hour = false
-    )
+    var selectedHour by remember { mutableIntStateOf(8) }
+    var selectedMinute by remember { mutableIntStateOf(0) }
+    var showValidationErrors by remember { mutableStateOf(false) }
+    val medicationNameError = showValidationErrors && medicationName.isBlank()
     val selectedTime = String.format(
         Locale.getDefault(),
         "%02d:%02d",
-        timePickerState.hour,
-        timePickerState.minute
+        selectedHour,
+        selectedMinute
     )
 
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp, vertical = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -86,7 +89,13 @@ fun MedicationReminderScreen(
             onValueChange = { medicationName = it },
             label = { Text("Medication name *") },
             placeholder = { Text("For example, Vitamin D") },
-            supportingText = { Text("Enter the name shown on your medication label.") },
+            isError = medicationNameError,
+            supportingText = {
+                Text(
+                    if (medicationNameError) "Please enter a medication name."
+                    else "Enter the name shown on your medication label."
+                )
+            },
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
@@ -142,12 +151,11 @@ fun MedicationReminderScreen(
 
         Button(
             onClick = {
-                onSave(
-                    medicationName,
-                    timePickerState.hour,
-                    timePickerState.minute,
-                    reminderEnabled
-                )
+                if (medicationName.isBlank()) {
+                    showValidationErrors = true
+                } else {
+                    onSave(medicationName, selectedHour, selectedMinute, reminderEnabled)
+                }
             },
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -156,11 +164,23 @@ fun MedicationReminderScreen(
     }
 
     if (showTimePicker) {
+        val timePickerState = rememberTimePickerState(
+            initialHour = selectedHour,
+            initialMinute = selectedMinute,
+            is24Hour = false
+        )
+
         TimePickerDialog(
             onDismissRequest = { showTimePicker = false },
             title = { Text("Select reminder time") },
             confirmButton = {
-                TextButton(onClick = { showTimePicker = false }) {
+                TextButton(
+                    onClick = {
+                        selectedHour = timePickerState.hour
+                        selectedMinute = timePickerState.minute
+                        showTimePicker = false
+                    }
+                ) {
                     Text("Confirm")
                 }
             },

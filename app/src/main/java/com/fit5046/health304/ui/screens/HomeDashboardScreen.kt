@@ -9,11 +9,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -29,6 +34,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.fit5046.health304.ui.theme._304HealthTheme
+import androidx.compose.material.icons.filled.Search
 
 data class MoodRecord(
     val date: String,
@@ -39,7 +45,8 @@ data class MoodRecord(
 fun HomeDashboardScreen(
     onMoodClick: () -> Unit = {},
     onViewAllMoodClick: () -> Unit = {},
-    onProfileClick: () -> Unit = {}
+    onProfileClick: () -> Unit = {},
+    onSearchClick: () -> Unit = {}
 ) {
     var moodCompleted by remember { mutableStateOf(true) }
     var medicationCompleted by remember { mutableStateOf(false) }
@@ -71,17 +78,33 @@ fun HomeDashboardScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = "Dashboard",
+                    text = "304Health",
                     style = MaterialTheme.typography.headlineMedium,
                     modifier = Modifier.align(Alignment.Center),
                     textAlign = TextAlign.Center
                 )
 
-                TextButton(
-                    onClick = onProfileClick,
-                    modifier = Modifier.align(Alignment.CenterEnd)
+                Row(
+                    modifier = Modifier.align(Alignment.CenterEnd),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Profile")
+                    IconButton(onClick = onSearchClick) {
+                        Icon(
+                            imageVector = Icons.Filled.Search,
+                            contentDescription = "Search",
+                            modifier = Modifier.size(28.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+
+                    IconButton(onClick = onProfileClick) {
+                        Icon(
+                            imageVector = Icons.Filled.AccountCircle,
+                            contentDescription = "Profile",
+                            modifier = Modifier.size(36.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             }
 
@@ -283,6 +306,8 @@ private fun ChecklistItem(
         )
     }
 }
+
+
 
 @Preview(showBackground = true, showSystemUi = true)
 @Composable

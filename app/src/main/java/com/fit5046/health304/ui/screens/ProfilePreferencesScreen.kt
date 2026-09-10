@@ -16,6 +16,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -46,7 +47,8 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfilePreferencesScreen(
-    onSave: (dateOfBirth: String, healthGoal: String, activityLevel: String) -> Unit = { _, _, _ -> }
+    onSave: (dateOfBirth: String, healthGoal: String, activityLevel: String) -> Unit = { _, _, _ -> },
+    onLogout: () -> Unit = {}
 ) {
     val healthGoals = listOf(
         "Improve fitness",
@@ -199,6 +201,15 @@ fun ProfilePreferencesScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Save Preferences")
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedButton(
+            onClick = onLogout,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Log Out")
         }
     }
 

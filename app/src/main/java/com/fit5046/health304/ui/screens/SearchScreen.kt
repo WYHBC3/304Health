@@ -1,6 +1,7 @@
 package com.fit5046.health304.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -25,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -35,7 +37,12 @@ data class SearchItem(
 )
 
 @Composable
-fun SearchScreen() {
+fun SearchScreen(
+    onMoodClick: () -> Unit = {},
+    onMedicationClick: () -> Unit = {},
+    onExerciseClick: () -> Unit = {},
+    onHealthDataClick: () -> Unit = {}
+) {
 
     var searchText by remember {
         mutableStateOf("")
@@ -147,15 +154,16 @@ fun SearchScreen() {
             modifier = Modifier.height(16.dp)
         )
 
+        // First row of filters
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+
             listOf(
                 "All",
                 "Mood",
-                "Medication",
-                "Exercise"
+                "Medication"
             ).forEach { type ->
 
                 FilterChip(
@@ -171,18 +179,35 @@ fun SearchScreen() {
         }
 
         Spacer(
-            modifier = Modifier.height(8.dp)
+            modifier = Modifier.height(4.dp)
         )
 
-        FilterChip(
-            selected = selectedType == "Health Data",
-            onClick = {
-                selectedType = "Health Data"
-            },
-            label = {
-                Text("Health Data")
-            }
-        )
+        // Second row of filters
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+
+            FilterChip(
+                selected = selectedType == "Exercise",
+                onClick = {
+                    selectedType = "Exercise"
+                },
+                label = {
+                    Text("Exercise")
+                }
+            )
+
+            FilterChip(
+                selected = selectedType == "Health Data",
+                onClick = {
+                    selectedType = "Health Data"
+                },
+                label = {
+                    Text("Health Data")
+                }
+            )
+        }
 
         Spacer(
             modifier = Modifier.height(20.dp)
@@ -198,11 +223,46 @@ fun SearchScreen() {
             modifier = Modifier.height(12.dp)
         )
 
-        LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            items(filteredItems) { item ->
-                SearchResultCard(item)
+        if (filteredItems.isEmpty()) {
+
+            Text(
+                text = "No matching results found.",
+                fontSize = 14.sp,
+                color = Color.Gray
+            )
+
+        } else {
+
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+
+                items(filteredItems) { item ->
+
+                    SearchResultCard(
+                        item = item,
+                        onClick = {
+                            when (item.type) {
+
+                                "Mood" -> {
+                                    onMoodClick()
+                                }
+
+                                "Medication" -> {
+                                    onMedicationClick()
+                                }
+
+                                "Exercise" -> {
+                                    onExerciseClick()
+                                }
+
+                                "Health Data" -> {
+                                    onHealthDataClick()
+                                }
+                            }
+                        }
+                    )
+                }
             }
         }
     }
@@ -210,11 +270,16 @@ fun SearchScreen() {
 
 @Composable
 private fun SearchResultCard(
-    item: SearchItem
+    item: SearchItem,
+    onClick: () -> Unit
 ) {
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable {
+                onClick()
+            },
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(
             containerColor = Color.White
@@ -252,4 +317,13 @@ private fun SearchResultCard(
             )
         }
     }
+}
+
+@Preview(
+    showBackground = true,
+    showSystemUi = true
+)
+@Composable
+private fun SearchScreenPreview() {
+    SearchScreen()
 }

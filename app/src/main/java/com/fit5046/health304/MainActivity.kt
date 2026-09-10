@@ -124,6 +124,9 @@ fun AppNavHost() {
                     },
                     onProfileClick = {
                         navController.navigate("profile")
+                    },
+                    onSearchClick = {
+                        navController.navigate("search")
                     }
                 )
             }
@@ -144,15 +147,21 @@ fun AppNavHost() {
                 ProfilePreferencesScreen(
                     onSave = { _, _, _ ->
                         navController.popBackStack()
+                    },
+                    onLogout = {
+                        navController.navigate("login") {
+                            popUpTo(0) { inclusive = true }
+                        }
                     }
                 )
             }
-        }
-        composable("visualisation") {
-            DataVisualizationScreen()
-        }
-        composable("search") {
-            SearchScreen()
+
+            composable("visualisation") {
+                DataVisualizationScreen()
+            }
+            composable("search") {
+                SearchScreen()
+            }
         }
     }
 }

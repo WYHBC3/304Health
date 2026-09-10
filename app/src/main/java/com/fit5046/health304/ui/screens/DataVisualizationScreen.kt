@@ -13,12 +13,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
@@ -30,14 +30,14 @@ fun DataVisualizationScreen() {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF7F8FA))
+            .background(MaterialTheme.colorScheme.background)
             .padding(20.dp)
     ) {
         Text(
             text = "Health Trends",
             fontSize = 28.sp,
             fontWeight = FontWeight.Bold,
-            color = Color(0xFF1F2937)
+            color = MaterialTheme.colorScheme.onBackground
         )
 
         Spacer(modifier = Modifier.height(6.dp))
@@ -45,7 +45,7 @@ fun DataVisualizationScreen() {
         Text(
             text = "Your weekly health overview",
             fontSize = 14.sp,
-            color = Color.Gray
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -68,7 +68,7 @@ private fun MoodSummaryCard() {
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White
+            containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
         Row(
@@ -82,7 +82,7 @@ private fun MoodSummaryCard() {
                 Text(
                     text = "Average Mood",
                     fontSize = 14.sp,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 Spacer(modifier = Modifier.height(6.dp))
@@ -90,13 +90,14 @@ private fun MoodSummaryCard() {
                 Text(
                     text = "Good",
                     fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
 
                 Text(
                     text = "4.1 / 5",
                     fontSize = 14.sp,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
@@ -110,11 +111,14 @@ private fun MoodSummaryCard() {
 
 @Composable
 private fun MoodTrendCard() {
+    // Canvas draw calls aren't @Composable, so grab the theme color here first.
+    val lineColor = MaterialTheme.colorScheme.primary
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White
+            containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
         Column(
@@ -123,7 +127,8 @@ private fun MoodTrendCard() {
             Text(
                 text = "Mood Trend",
                 fontSize = 18.sp,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
             )
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -145,27 +150,21 @@ private fun MoodTrendCard() {
 
                 val path = Path()
 
-                path.moveTo(
-                    points.first().x,
-                    points.first().y
-                )
+                path.moveTo(points.first().x, points.first().y)
 
                 points.drop(1).forEach { point ->
-                    path.lineTo(
-                        point.x,
-                        point.y
-                    )
+                    path.lineTo(point.x, point.y)
                 }
 
                 drawPath(
                     path = path,
-                    color = Color(0xFF6750A4),
+                    color = lineColor,
                     style = Stroke(width = 6f)
                 )
 
                 points.forEach { point ->
                     drawCircle(
-                        color = Color(0xFF6750A4),
+                        color = lineColor,
                         radius = 8f,
                         center = point
                     )
@@ -178,19 +177,11 @@ private fun MoodTrendCard() {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                listOf(
-                    "Mon",
-                    "Tue",
-                    "Wed",
-                    "Thu",
-                    "Fri",
-                    "Sat",
-                    "Sun"
-                ).forEach { day ->
+                listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun").forEach { day ->
                     Text(
                         text = day,
                         fontSize = 11.sp,
-                        color = Color.Gray
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -200,11 +191,13 @@ private fun MoodTrendCard() {
 
 @Composable
 private fun HeartRateCard() {
+    val lineColor = MaterialTheme.colorScheme.secondary
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White
+            containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
         Column(
@@ -218,7 +211,8 @@ private fun HeartRateCard() {
                     Text(
                         text = "Heart Rate",
                         fontSize = 18.sp,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
 
                     Spacer(modifier = Modifier.height(5.dp))
@@ -226,23 +220,22 @@ private fun HeartRateCard() {
                     Text(
                         text = "Weekly average",
                         fontSize = 13.sp,
-                        color = Color.Gray
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
-                Column(
-                    horizontalAlignment = Alignment.End
-                ) {
+                Column(horizontalAlignment = Alignment.End) {
                     Text(
                         text = "72",
                         fontSize = 26.sp,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
 
                     Text(
                         text = "bpm",
                         fontSize = 12.sp,
-                        color = Color.Gray
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -267,7 +260,7 @@ private fun HeartRateCard() {
 
                 drawPath(
                     path = path,
-                    color = Color(0xFFD32F2F),
+                    color = lineColor,
                     style = Stroke(width = 5f)
                 )
             }

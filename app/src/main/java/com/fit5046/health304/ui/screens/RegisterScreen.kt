@@ -44,7 +44,8 @@ fun RegisterScreen(
     onRegisterClick: (name: String, email: String, password: String) -> Unit = { _, _, _ -> },
     onNavigateToLogin: () -> Unit = {}
 ) {
-    var name by remember { mutableStateOf("") }
+    var firstName by remember { mutableStateOf("") }
+    var lastName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
@@ -78,8 +79,8 @@ fun RegisterScreen(
         Spacer(modifier = Modifier.height(32.dp))
 
         OutlinedTextField(
-            value = name,
-            onValueChange = { name = it },
+            value = firstName,
+            onValueChange = { firstName = it },
             label = { Text("First Name") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
@@ -88,8 +89,8 @@ fun RegisterScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         OutlinedTextField(
-            value = name,
-            onValueChange = { name = it },
+            value = lastName,
+            onValueChange = { lastName = it },
             label = { Text("Last Name") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
@@ -166,7 +167,7 @@ fun RegisterScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         Button(
-            onClick = { onRegisterClick(name, email, password) },
+            onClick = { onRegisterClick("$firstName $lastName", email, password) },
             enabled = passwordsMatch,
             modifier = Modifier.fillMaxWidth()
         ) {

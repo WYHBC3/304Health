@@ -64,6 +64,11 @@ fun ProfilePreferencesScreen(
     var activityLevelExpanded by remember { mutableStateOf(false) }
     var selectedHealthGoal by remember { mutableStateOf("") }
     var selectedActivityLevel by remember { mutableStateOf("") }
+    var showValidationErrors by remember { mutableStateOf(false) }
+
+    val dateOfBirthError = showValidationErrors && selectedDateMillis == 0L
+    val healthGoalError = showValidationErrors && selectedHealthGoal.isBlank()
+    val activityLevelError = showValidationErrors && selectedActivityLevel.isBlank()
 
     val selectedDate = if (selectedDateMillis == 0L) {
         ""
@@ -101,12 +106,18 @@ fun ProfilePreferencesScreen(
             readOnly = true,
             label = { Text("Date of birth *") },
             placeholder = { Text("Select your date of birth") },
+            isError = dateOfBirthError,
             trailingIcon = {
                 TextButton(onClick = { showDatePicker = true }) {
                     Text("Select")
                 }
             },
-            supportingText = { Text("This helps us tailor suitable activity suggestions.") },
+            supportingText = {
+                Text(
+                    if (dateOfBirthError) "Please select your date of birth."
+                    else "This helps us tailor suitable activity suggestions."
+                )
+            },
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -122,10 +133,16 @@ fun ProfilePreferencesScreen(
                 readOnly = true,
                 label = { Text("Primary health goal *") },
                 placeholder = { Text("Select a goal") },
+                isError = healthGoalError,
                 trailingIcon = {
                     ExposedDropdownMenuDefaults.TrailingIcon(expanded = healthGoalExpanded)
                 },
-                supportingText = { Text("Choose the goal you want to focus on first.") },
+                supportingText = {
+                    Text(
+                        if (healthGoalError) "Please select a primary health goal."
+                        else "Choose the goal you want to focus on first."
+                    )
+                },
                 modifier = Modifier
                     .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
                     .fillMaxWidth()
@@ -159,10 +176,16 @@ fun ProfilePreferencesScreen(
                 readOnly = true,
                 label = { Text("Current activity level *") },
                 placeholder = { Text("Select your activity level") },
+                isError = activityLevelError,
                 trailingIcon = {
                     ExposedDropdownMenuDefaults.TrailingIcon(expanded = activityLevelExpanded)
                 },
-                supportingText = { Text("Choose the option that best describes a typical week.") },
+                supportingText = {
+                    Text(
+                        if (activityLevelError) "Please select your current activity level."
+                        else "Choose the option that best describes a typical week."
+                    )
+                },
                 modifier = Modifier
                     .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
                     .fillMaxWidth()
@@ -196,7 +219,11 @@ fun ProfilePreferencesScreen(
 
         Button(
             onClick = {
-                onSave(selectedDate, selectedHealthGoal, selectedActivityLevel)
+                if (selectedDateMillis == 0L || selectedHealthGoal.isBlank() || selectedActivityLevel.isBlank()) {
+                    showValidationErrors = true
+                } else {
+                    onSave(selectedDate, selectedHealthGoal, selectedActivityLevel)
+                }
             },
             modifier = Modifier.fillMaxWidth()
         ) {

@@ -160,7 +160,20 @@ fun AppNavHost() {
                 DataVisualizationScreen()
             }
             composable("search") {
-                SearchScreen()
+                SearchScreen(
+                    onMoodClick = {
+                        navController.navigate("mood")
+                    },
+                    onMedicationClick = {
+                        navController.navigate("medication")
+                    },
+                    onExerciseClick = {
+                        navController.navigate("exercise")
+                    },
+                    onHealthDataClick = {
+                        navController.navigate("visualisation")
+                    }
+                )
             }
         }
     }

@@ -1,6 +1,5 @@
 package com.fit5046.health304.ui.screens
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -14,11 +13,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,6 +38,8 @@ data class SearchItem(
 
 @Composable
 fun SearchScreen(
+    moodEntries: List<MoodDiaryEntry> = emptyList(),
+    onBackClick: () -> Unit = {},
     onMoodClick: () -> Unit = {},
     onMedicationClick: () -> Unit = {},
     onExerciseClick: () -> Unit = {},
@@ -53,165 +54,381 @@ fun SearchScreen(
         mutableStateOf("All")
     }
 
-    val searchItems = listOf(
-        SearchItem(
-            title = "Mood Journal",
-            type = "Mood",
-            description = "View and manage your recorded mood entries."
-        ),
-        SearchItem(
-            title = "Feeling Happy",
-            type = "Mood",
-            description = "A positive mood record from your recent journal."
-        ),
-        SearchItem(
-            title = "Medication Reminder",
-            type = "Medication",
-            description = "View and manage your medication reminder settings."
-        ),
-        SearchItem(
-            title = "Morning Medication",
-            type = "Medication",
-            description = "Medication reminder scheduled for the morning."
-        ),
-        SearchItem(
-            title = "Walking",
-            type = "Exercise",
-            description = "Low-impact exercise suitable for most fitness levels."
-        ),
-        SearchItem(
-            title = "Stretching",
-            type = "Exercise",
-            description = "Gentle activity that supports flexibility and recovery."
-        ),
-        SearchItem(
-            title = "Heart Rate Trend",
-            type = "Health Data",
-            description = "Review your weekly heart rate information."
-        ),
-        SearchItem(
-            title = "Weekly Health Overview",
-            type = "Health Data",
-            description = "View a summary of your recent health trends."
-        )
-    )
+    /*
+     * Real search results generated from
+     * the shared Mood Diary records.
+     */
+    val moodSearchItems =
+        moodEntries
+            .sortedByDescending {
+                it.dateMillis
+            }
+            .map { entry ->
 
-    val filteredItems = searchItems.filter { item ->
+                SearchItem(
+                    title =
+                        "${
+                            formatDate(
+                                entry.dateMillis
+                            )
+                        } - ${entry.mood}",
 
-        val matchesSearch =
-            item.title.contains(searchText, ignoreCase = true) ||
-                    item.type.contains(searchText, ignoreCase = true) ||
-                    item.description.contains(searchText, ignoreCase = true)
+                    type = "Mood",
 
-        val matchesType =
-            selectedType == "All" ||
-                    item.type == selectedType
+                    description =
+                        buildString {
 
-        matchesSearch && matchesType
-    }
+                            if (
+                                entry.factors
+                                    .isNotEmpty()
+                            ) {
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(20.dp)
-    ) {
+                                append(
+                                    "Factors: ${
+                                        entry.factors
+                                            .joinToString(
+                                                ", "
+                                            )
+                                    }"
+                                )
+                            }
 
-        Text(
-            text = "Search",
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground
-        )
+                            if (
+                                entry.notes
+                                    .isNotBlank()
+                            ) {
 
-        Spacer(modifier = Modifier.height(6.dp))
+                                if (
+                                    isNotEmpty()
+                                ) {
+                                    append(" · ")
+                                }
 
-        Text(
-            text = "Search across your health information",
-            fontSize = 14.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+                                append(
+                                    entry.notes
+                                )
+                            }
 
-        Spacer(modifier = Modifier.height(20.dp))
-
-        OutlinedTextField(
-            value = searchText,
-            onValueChange = { searchText = it },
-            modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text("Search health content...") },
-            singleLine = true,
-            shape = RoundedCornerShape(16.dp)
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            listOf("All", "Mood", "Medication").forEach { type ->
-                FilterChip(
-                    selected = selectedType == type,
-                    onClick = { selectedType = type },
-                    label = { Text(type) }
+                            if (
+                                isEmpty()
+                            ) {
+                                append(
+                                    "Mood diary record"
+                                )
+                            }
+                        }
                 )
             }
-        }
 
-        Spacer(modifier = Modifier.height(4.dp))
+    /*
+     * Other modules do not yet expose
+     * shared record data, so these act
+     * as searchable feature entries.
+     */
+    val appItems =
+        listOf(
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            FilterChip(
-                selected = selectedType == "Exercise",
-                onClick = { selectedType = "Exercise" },
-                label = { Text("Exercise") }
+            SearchItem(
+                title =
+                    "Medication Reminder",
+
+                type =
+                    "Medication",
+
+                description =
+                    "View and manage your medication reminders."
+            ),
+
+            SearchItem(
+                title =
+                    "Exercise Library",
+
+                type =
+                    "Exercise",
+
+                description =
+                    "Browse exercises and health activities."
+            ),
+
+            SearchItem(
+                title =
+                    "Health Trends",
+
+                type =
+                    "Health Data",
+
+                description =
+                    "View your mood and health trends over time."
             )
-
-            FilterChip(
-                selected = selectedType == "Health Data",
-                onClick = { selectedType = "Health Data" },
-                label = { Text("Health Data") }
-            )
-        }
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        Text(
-            text = "Search Results",
-            fontSize = 18.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+    val searchItems =
+        moodSearchItems +
+                appItems
 
-        if (filteredItems.isEmpty()) {
-            Text(
-                text = "No matching results found.",
-                fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        } else {
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+    val filteredItems =
+        searchItems.filter { item ->
+
+            val matchesSearch =
+                searchText.isBlank() ||
+                        item.title.contains(
+                            searchText,
+                            ignoreCase = true
+                        ) ||
+                        item.type.contains(
+                            searchText,
+                            ignoreCase = true
+                        ) ||
+                        item.description.contains(
+                            searchText,
+                            ignoreCase = true
+                        )
+
+            val matchesType =
+                selectedType == "All" ||
+                        item.type ==
+                        selectedType
+
+            matchesSearch &&
+                    matchesType
+        }
+
+    LazyColumn(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(
+                    horizontal = 20.dp,
+                    vertical = 16.dp
+                ),
+
+        verticalArrangement =
+            Arrangement.spacedBy(12.dp)
+    ) {
+
+        item {
+
+            TextButton(
+                onClick =
+                    onBackClick
             ) {
-                items(filteredItems) { item ->
-                    SearchResultCard(
-                        item = item,
+
+                Text("← Back")
+            }
+
+            Text(
+                text = "Search",
+
+                style =
+                    MaterialTheme
+                        .typography
+                        .headlineMedium
+            )
+
+            Spacer(
+                modifier =
+                    Modifier.height(4.dp)
+            )
+
+            Text(
+                text =
+                    "Search across your health information",
+
+                style =
+                    MaterialTheme
+                        .typography
+                        .bodyMedium
+            )
+        }
+
+        item {
+
+            OutlinedTextField(
+                value =
+                    searchText,
+
+                onValueChange = {
+                    searchText = it
+                },
+
+                modifier =
+                    Modifier.fillMaxWidth(),
+
+                placeholder = {
+                    Text(
+                        "Search health content..."
+                    )
+                },
+
+                singleLine = true,
+
+                shape =
+                    RoundedCornerShape(
+                        16.dp
+                    )
+            )
+        }
+
+        item {
+
+            Row(
+                modifier =
+                    Modifier.fillMaxWidth(),
+
+                horizontalArrangement =
+                    Arrangement.spacedBy(
+                        8.dp
+                    )
+            ) {
+
+                listOf(
+                    "All",
+                    "Mood",
+                    "Medication"
+                ).forEach { type ->
+
+                    FilterChip(
+                        selected =
+                            selectedType ==
+                                    type,
+
                         onClick = {
-                            when (item.type) {
-                                "Mood" -> onMoodClick()
-                                "Medication" -> onMedicationClick()
-                                "Exercise" -> onExerciseClick()
-                                "Health Data" -> onHealthDataClick()
-                            }
+                            selectedType =
+                                type
+                        },
+
+                        label = {
+                            Text(type)
                         }
                     )
                 }
             }
+
+            Row(
+                modifier =
+                    Modifier.fillMaxWidth(),
+
+                horizontalArrangement =
+                    Arrangement.spacedBy(
+                        8.dp
+                    )
+            ) {
+
+                FilterChip(
+                    selected =
+                        selectedType ==
+                                "Exercise",
+
+                    onClick = {
+                        selectedType =
+                            "Exercise"
+                    },
+
+                    label = {
+                        Text(
+                            "Exercise"
+                        )
+                    }
+                )
+
+                FilterChip(
+                    selected =
+                        selectedType ==
+                                "Health Data",
+
+                    onClick = {
+                        selectedType =
+                            "Health Data"
+                    },
+
+                    label = {
+                        Text(
+                            "Health Data"
+                        )
+                    }
+                )
+            }
+        }
+
+        item {
+
+            Text(
+                text =
+                    "Search Results",
+
+                fontSize = 18.sp,
+
+                fontWeight =
+                    FontWeight.SemiBold
+            )
+        }
+
+        if (
+            filteredItems.isEmpty()
+        ) {
+
+            item {
+
+                Card(
+                    modifier =
+                        Modifier.fillMaxWidth()
+                ) {
+
+                    Text(
+                        text =
+                            "No matching results found.",
+
+                        modifier =
+                            Modifier.padding(
+                                18.dp
+                            ),
+
+                        style =
+                            MaterialTheme
+                                .typography
+                                .bodyMedium
+                    )
+                }
+            }
+
+        } else {
+
+            items(
+                filteredItems
+            ) { item ->
+
+                SearchResultCard(
+                    item = item,
+
+                    onClick = {
+
+                        when (
+                            item.type
+                        ) {
+
+                            "Mood" ->
+                                onMoodClick()
+
+                            "Medication" ->
+                                onMedicationClick()
+
+                            "Exercise" ->
+                                onExerciseClick()
+
+                            "Health Data" ->
+                                onHealthDataClick()
+                        }
+                    }
+                )
+            }
+        }
+
+        item {
+
+            Spacer(
+                modifier =
+                    Modifier.height(20.dp)
+            )
         }
     }
 }
@@ -221,48 +438,128 @@ private fun SearchResultCard(
     item: SearchItem,
     onClick: () -> Unit
 ) {
+
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable {
+                    onClick()
+                },
+
+        shape =
+            RoundedCornerShape(
+                18.dp
+            )
     ) {
+
         Column(
-            modifier = Modifier.padding(18.dp)
+            modifier =
+                Modifier.padding(18.dp)
         ) {
+
             Text(
-                text = item.title,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
+                text =
+                    item.title,
+
+                style =
+                    MaterialTheme
+                        .typography
+                        .titleMedium
             )
 
-            Spacer(modifier = Modifier.height(5.dp))
-
-            Text(
-                text = item.type,
-                fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.primary
+            Spacer(
+                modifier =
+                    Modifier.height(5.dp)
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text =
+                    item.type,
+
+                style =
+                    MaterialTheme
+                        .typography
+                        .labelMedium,
+
+                color =
+                    MaterialTheme
+                        .colorScheme
+                        .primary
+            )
+
+            Spacer(
+                modifier =
+                    Modifier.height(8.dp)
+            )
 
             Text(
-                text = item.description,
-                fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                text =
+                    item.description,
+
+                style =
+                    MaterialTheme
+                        .typography
+                        .bodyMedium
             )
         }
     }
 }
 
-@Preview(showBackground = true, showSystemUi = true)
+@Preview(
+    showBackground = true,
+    showSystemUi = true
+)
 @Composable
 private fun SearchScreenPreview() {
+
+    val previewEntries =
+        listOf(
+            MoodDiaryEntry(
+                dateMillis =
+                    createDateMillis(
+                        2026,
+                        9,
+                        11
+                    ),
+
+                mood =
+                    "Stressed",
+
+                factors =
+                    listOf(
+                        "Study / Work",
+                        "Sleep"
+                    ),
+
+                notes =
+                    "Assignment deadline tomorrow."
+            ),
+
+            MoodDiaryEntry(
+                dateMillis =
+                    createDateMillis(
+                        2026,
+                        9,
+                        10
+                    ),
+
+                mood =
+                    "Very Good",
+
+                factors =
+                    listOf("Exercise"),
+
+                notes =
+                    "Had a great workout."
+            )
+        )
+
     _304HealthTheme {
-        SearchScreen()
+
+        SearchScreen(
+            moodEntries =
+                previewEntries
+        )
     }
 }

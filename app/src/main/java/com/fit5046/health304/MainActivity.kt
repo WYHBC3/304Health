@@ -82,7 +82,7 @@ fun AppNavHost() {
 
         NavHost(
             navController = navController,
-            startDestination = "login",
+            startDestination = "search",
             modifier = Modifier.padding(innerPadding)
         ) {
 

@@ -13,6 +13,11 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.SelectableDates
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuDefaults
@@ -22,8 +27,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -33,22 +38,25 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.fit5046.health304.ui.theme._304HealthTheme
+import com.fit5046.health304.data.HealthPreferences
+import androidx.compose.runtime.saveable.rememberSaveable
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
 
 /**
- * Static UI for the user's health preferences.
- *
- * This A2 prototype demonstrates the required DatePicker and Expanded Dropdown
- * Menu components. Saving only returns the values to a future navigation/data
- * layer; it does not persist data yet.
+ * Editable form; its route loads/saves account-scoped Room data through a ViewModel.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfilePreferencesScreen(
-    onSave: (dateOfBirth: String, healthGoal: String, activityLevel: String) -> Unit = { _, _, _ -> },
-    onLogout: () -> Unit = {}
+    onSave: (dateOfBirthMillis: Long, healthGoal: String, activityLevel: String) -> Unit = { _, _, _ -> },
+    onLogout: () -> Unit = {},
+    onCancel: () -> Unit = {},
+    initialPreferences: HealthPreferences? = null,
+    isSaving: Boolean = false,
+    statusMessage: String? = null
 ) {
     val healthGoals = listOf(
         "Improve fitness",
@@ -58,22 +66,34 @@ fun ProfilePreferencesScreen(
     )
     val activityLevels = listOf("Low", "Moderate", "High")
 
-    var selectedDateMillis by remember { mutableLongStateOf(0L) }
+    var selectedDateMillis by rememberSaveable { mutableStateOf<Long?>(initialPreferences?.dateOfBirthMillis) }
     var showDatePicker by remember { mutableStateOf(false) }
     var healthGoalExpanded by remember { mutableStateOf(false) }
     var activityLevelExpanded by remember { mutableStateOf(false) }
-    var selectedHealthGoal by remember { mutableStateOf("") }
-    var selectedActivityLevel by remember { mutableStateOf("") }
+    var selectedHealthGoal by rememberSaveable { mutableStateOf(initialPreferences?.healthGoal.orEmpty()) }
+    var selectedActivityLevel by rememberSaveable { mutableStateOf(initialPreferences?.activityLevel.orEmpty()) }
     var showValidationErrors by remember { mutableStateOf(false) }
+    var loadedPreferences by rememberSaveable { mutableStateOf(initialPreferences != null) }
 
-    val dateOfBirthError = showValidationErrors && selectedDateMillis == 0L
+    LaunchedEffect(initialPreferences) {
+        if (!loadedPreferences && initialPreferences != null) {
+            selectedDateMillis = initialPreferences.dateOfBirthMillis
+            selectedHealthGoal = initialPreferences.healthGoal
+            selectedActivityLevel = initialPreferences.activityLevel
+            loadedPreferences = true
+        }
+    }
+    val dateOfBirthError = showValidationErrors &&
+        (selectedDateMillis == null || selectedDateMillis!! > System.currentTimeMillis())
     val healthGoalError = showValidationErrors && selectedHealthGoal.isBlank()
     val activityLevelError = showValidationErrors && selectedActivityLevel.isBlank()
 
-    val selectedDate = if (selectedDateMillis == 0L) {
+    val selectedDate = if (selectedDateMillis == null) {
         ""
     } else {
-        SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date(selectedDateMillis))
+        SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }.format(Date(selectedDateMillis!!))
     }
 
     Column(
@@ -108,8 +128,8 @@ fun ProfilePreferencesScreen(
             placeholder = { Text("Select your date of birth") },
             isError = dateOfBirthError,
             trailingIcon = {
-                TextButton(onClick = { showDatePicker = true }) {
-                    Text("Select")
+                IconButton(onClick = { showDatePicker = true }, enabled = !isSaving) {
+                    Icon(Icons.Default.DateRange, contentDescription = "Select date of birth")
                 }
             },
             supportingText = {
@@ -219,21 +239,37 @@ fun ProfilePreferencesScreen(
 
         Button(
             onClick = {
-                if (selectedDateMillis == 0L || selectedHealthGoal.isBlank() || selectedActivityLevel.isBlank()) {
+                if (selectedDateMillis == null || selectedDateMillis!! > System.currentTimeMillis() || selectedHealthGoal.isBlank() || selectedActivityLevel.isBlank()) {
                     showValidationErrors = true
                 } else {
-                    onSave(selectedDate, selectedHealthGoal, selectedActivityLevel)
+                    onSave(selectedDateMillis!!, selectedHealthGoal, selectedActivityLevel)
                 }
             },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isSaving
         ) {
-            Text("Save Preferences")
+            Text(if (isSaving) "Saving…" else "Save Preferences")
+        }
+
+        statusMessage?.let {
+            Text(it, color = androidx.compose.material3.MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(top = 8.dp))
+        }
+        OutlinedButton(onClick = {
+            selectedDateMillis = initialPreferences?.dateOfBirthMillis
+            selectedHealthGoal = initialPreferences?.healthGoal.orEmpty()
+            selectedActivityLevel = initialPreferences?.activityLevel.orEmpty()
+            showValidationErrors = false
+            onCancel()
+        }, enabled = !isSaving, modifier = Modifier.fillMaxWidth()) {
+            Text("Cancel")
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
         OutlinedButton(
             onClick = onLogout,
+            enabled = !isSaving,
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Log Out")
@@ -242,7 +278,10 @@ fun ProfilePreferencesScreen(
 
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = selectedDateMillis.takeIf { it != 0L }
+            initialSelectedDateMillis = selectedDateMillis,
+            selectableDates = object : SelectableDates {
+                override fun isSelectableDate(utcTimeMillis: Long) = utcTimeMillis <= System.currentTimeMillis()
+            }
         )
 
         DatePickerDialog(

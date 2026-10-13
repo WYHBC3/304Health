@@ -21,10 +21,10 @@ import com.fit5046.health304.ui.screens.DataVisualizationScreen
 import com.fit5046.health304.ui.screens.ExerciseLibraryScreen
 import com.fit5046.health304.ui.screens.HomeDashboardScreen
 import com.fit5046.health304.ui.screens.LoginScreen
-import com.fit5046.health304.ui.screens.MedicationReminderScreen
+import com.fit5046.health304.ui.screens.MedicationReminderRoute
+import com.fit5046.health304.ui.screens.ProfilePreferencesRoute
 import com.fit5046.health304.ui.screens.MoodDiaryEntry
 import com.fit5046.health304.ui.screens.MoodDiaryScreen
-import com.fit5046.health304.ui.screens.ProfilePreferencesScreen
 import com.fit5046.health304.ui.screens.RegisterScreen
 import com.fit5046.health304.ui.screens.SearchScreen
 import com.fit5046.health304.ui.screens.createDateMillis
@@ -217,16 +217,17 @@ fun AppNavHost(authViewModel: AuthViewModel) {
             }
 
             composable("medication") {
-                MedicationReminderScreen()
+                MedicationReminderRoute()
             }
 
             composable("profile") {
 
-                ProfilePreferencesScreen(
+                ProfilePreferencesRoute(
 
-                    onSave = { _, _, _ ->
+                    onSaved = {
                         navController.popBackStack()
                     },
+                    onCancel = { navController.popBackStack() },
 
                     onLogout = {
                         authViewModel.logout()

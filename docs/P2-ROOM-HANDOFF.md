@@ -12,7 +12,7 @@
 
 ## Integration with P1/P3/P4
 
-The current main branch still uses prototype login navigation. P1 must connect Firebase sign-in/sign-out. Without `FirebaseAuth.currentUser`, P2 shows a sign-in message and refuses writes; it never invents a shared test UID.
+On 13 October, P1's real Firebase email/password registration and login were merged from main. P2 routes use the resulting Firebase UID; logout calls P1's AuthViewModel to clear the session. Without `FirebaseAuth.currentUser`, P2 shows a sign-in message and refuses writes; it never invents a shared test UID. Real-account UI checks below still need to be completed with the user's test accounts.
 
 P1 can observe `healthPreferencesDAO().getPreferences(uid)` for health goal/activity level. P4 can observe `medicationReminderDAO().getReminders(uid)` for account-scoped search. These flows emit after Room writes. P3 should reuse these records rather than keep separate sample medication data.
 

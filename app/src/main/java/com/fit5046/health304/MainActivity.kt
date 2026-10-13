@@ -29,25 +29,26 @@ import com.fit5046.health304.ui.screens.RegisterScreen
 import com.fit5046.health304.ui.screens.SearchScreen
 import com.fit5046.health304.ui.screens.createDateMillis
 import com.fit5046.health304.ui.theme._304HealthTheme
-import com.google.firebase.auth.FirebaseAuth
+import androidx.activity.viewModels
+import com.fit5046.health304.viewmodel.AuthViewModel
 
 class MainActivity : ComponentActivity() {
 
+    private val authViewModel: AuthViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         enableEdgeToEdge()
-
         setContent {
             _304HealthTheme {
-                AppNavHost()
+                AppNavHost(authViewModel)
             }
         }
     }
 }
 
 @Composable
-fun AppNavHost() {
+fun AppNavHost(authViewModel: AuthViewModel) {
 
     val navController = rememberNavController()
 
@@ -140,41 +141,33 @@ fun AppNavHost() {
 
         NavHost(
             navController = navController,
-            startDestination = "login",
+            startDestination = if (authViewModel.isLoggedIn) "home" else "login",
             modifier = Modifier.padding(innerPadding)
         ) {
 
             composable("login") {
-
                 LoginScreen(
-
-                    onLoginClick = { _, _ ->
-
+                    authViewModel = authViewModel,
+                    onLoginSuccess = {
                         navController.navigate("home") {
-
-                            popUpTo("login") {
-                                inclusive = true
-                            }
+                            popUpTo("login") { inclusive = true }
                         }
                     },
-
                     onNavigateToRegister = {
                         navController.navigate("register")
-                    },
-
-                    onForgotPassword = {
                     }
                 )
             }
 
             composable("register") {
-
                 RegisterScreen(
-
-                    onRegisterClick = { _, _, _ ->
-                        navController.popBackStack()
+                    authViewModel = authViewModel,
+                    onRegisterSuccess = {
+                        // Removes both Register and Login from the back stack
+                        navController.navigate("home") {
+                            popUpTo("login") { inclusive = true }
+                        }
                     },
-
                     onNavigateToLogin = {
                         navController.popBackStack()
                     }
@@ -237,14 +230,9 @@ fun AppNavHost() {
                     onCancel = { navController.popBackStack() },
 
                     onLogout = {
-
-                        FirebaseAuth.getInstance().signOut()
-
+                        authViewModel.logout()
                         navController.navigate("login") {
-
-                            popUpTo(0) {
-                                inclusive = true
-                            }
+                            popUpTo(0) { inclusive = true }
                         }
                     }
                 )

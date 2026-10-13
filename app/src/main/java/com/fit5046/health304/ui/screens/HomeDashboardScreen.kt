@@ -25,6 +25,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,29 +35,99 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fit5046.health304.ui.theme._304HealthTheme
+import com.fit5046.health304.viewmodel.MoodViewModel
+import com.google.firebase.auth.FirebaseAuth
+
 
 @Composable
 fun HomeDashboardScreen(
-    moodEntries: List<MoodDiaryEntry> = emptyList(),
+
     onMoodClick: () -> Unit = {},
+
     onViewAllMoodClick: () -> Unit = {},
+
     onProfileClick: () -> Unit = {},
+
     onSearchClick: () -> Unit = {},
-    onHealthTrendsClick: () -> Unit = {}
+
+    onHealthTrendsClick: () -> Unit = {},
+
+    moodViewModel: MoodViewModel = viewModel()
+
 ) {
 
-    var moodCompleted by remember {
-        mutableStateOf(true)
+    /*
+     * Get the current Firebase user.
+     * Mood records are filtered using this UID.
+     */
+    val userId =
+        FirebaseAuth
+            .getInstance()
+            .currentUser
+            ?.uid
+            ?: return
+
+
+    /*
+     * Observe Room data.
+     *
+     * When a Mood record is inserted, updated
+     * or deleted, this list refreshes automatically.
+     */
+    val moodEntries by
+    moodViewModel
+        .getMoodEntries(userId)
+        .collectAsState(
+            initial = emptyList()
+        )
+
+
+    /*
+     * Daily wellness checklist.
+     *
+     * These values are still local UI state for now.
+     * Room persistence for Daily Wellness Progress
+     * can be added separately.
+     */
+    var moodCompleted by
+    remember {
+        mutableStateOf(
+            false
+        )
     }
 
-    var medicationCompleted by remember {
-        mutableStateOf(false)
+    var medicationCompleted by
+    remember {
+        mutableStateOf(
+            false
+        )
     }
 
-    var exerciseCompleted by remember {
-        mutableStateOf(true)
+    var exerciseCompleted by
+    remember {
+        mutableStateOf(
+            false
+        )
     }
+
+
+    /*
+     * A mood record for today means the
+     * mood diary task is completed.
+     */
+    if (
+        moodEntries.any {
+            isSameDay(
+                it.dateMillis,
+                System.currentTimeMillis()
+            )
+        }
+    ) {
+        moodCompleted = true
+    }
+
 
     val completedTasks =
         listOf(
@@ -67,14 +138,22 @@ fun HomeDashboardScreen(
             it
         }
 
+
     val progress =
         completedTasks / 3f
 
+
+    /*
+     * DAO already returns records ordered by
+     * dateMillis DESC, but sorting here also
+     * makes Home independent from DAO ordering.
+     */
     val latestMoodEntry =
         moodEntries
             .maxByOrNull {
                 it.dateMillis
             }
+
 
     val recentMoodEntries =
         moodEntries
@@ -83,18 +162,27 @@ fun HomeDashboardScreen(
             }
             .take(3)
 
+
     LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(
-                horizontal = 24.dp,
-                vertical = 24.dp
-            ),
+
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(
+                    horizontal = 24.dp,
+                    vertical = 24.dp
+                ),
 
         verticalArrangement =
-            Arrangement.spacedBy(16.dp)
+            Arrangement.spacedBy(
+                16.dp
+            )
     ) {
 
+
+        /*
+         * Header
+         */
         item {
 
             Box(
@@ -103,7 +191,9 @@ fun HomeDashboardScreen(
             ) {
 
                 Text(
-                    text = "304Health",
+
+                    text =
+                        "304Health",
 
                     style =
                         MaterialTheme
@@ -119,7 +209,9 @@ fun HomeDashboardScreen(
                         TextAlign.Center
                 )
 
+
                 Row(
+
                     modifier =
                         Modifier.align(
                             Alignment.CenterEnd
@@ -135,6 +227,7 @@ fun HomeDashboardScreen(
                     ) {
 
                         Icon(
+
                             imageVector =
                                 Icons.Filled.Search,
 
@@ -142,7 +235,9 @@ fun HomeDashboardScreen(
                                 "Search",
 
                             modifier =
-                                Modifier.size(28.dp),
+                                Modifier.size(
+                                    28.dp
+                                ),
 
                             tint =
                                 MaterialTheme
@@ -151,12 +246,14 @@ fun HomeDashboardScreen(
                         )
                     }
 
+
                     IconButton(
                         onClick =
                             onProfileClick
                     ) {
 
                         Icon(
+
                             imageVector =
                                 Icons.Filled
                                     .AccountCircle,
@@ -165,7 +262,9 @@ fun HomeDashboardScreen(
                                 "Profile",
 
                             modifier =
-                                Modifier.size(36.dp),
+                                Modifier.size(
+                                    36.dp
+                                ),
 
                             tint =
                                 MaterialTheme
@@ -176,12 +275,17 @@ fun HomeDashboardScreen(
                 }
             }
 
+
             Spacer(
                 modifier =
-                    Modifier.height(8.dp)
+                    Modifier.height(
+                        8.dp
+                    )
             )
 
+
             Text(
+
                 text =
                     "Your wellness at a glance",
 
@@ -198,15 +302,24 @@ fun HomeDashboardScreen(
             )
         }
 
+
+        /*
+         * Welcome
+         */
         item {
 
             Spacer(
                 modifier =
-                    Modifier.height(8.dp)
+                    Modifier.height(
+                        8.dp
+                    )
             )
 
+
             Text(
-                text = "Welcome back!",
+
+                text =
+                    "Welcome back!",
 
                 style =
                     MaterialTheme
@@ -214,7 +327,9 @@ fun HomeDashboardScreen(
                         .titleLarge
             )
 
+
             Text(
+
                 text =
                     "Take care of yourself today.",
 
@@ -225,6 +340,10 @@ fun HomeDashboardScreen(
             )
         }
 
+
+        /*
+         * Today's progress
+         */
         item {
 
             Card(
@@ -234,10 +353,13 @@ fun HomeDashboardScreen(
 
                 Column(
                     modifier =
-                        Modifier.padding(16.dp)
+                        Modifier.padding(
+                            16.dp
+                        )
                 ) {
 
                     Text(
+
                         text =
                             "Today's Progress",
 
@@ -247,12 +369,17 @@ fun HomeDashboardScreen(
                                 .titleMedium
                     )
 
+
                     Spacer(
                         modifier =
-                            Modifier.height(12.dp)
+                            Modifier.height(
+                                12.dp
+                            )
                     )
 
+
                     LinearProgressIndicator(
+
                         progress = {
                             progress
                         },
@@ -261,12 +388,17 @@ fun HomeDashboardScreen(
                             Modifier.fillMaxWidth()
                     )
 
+
                     Spacer(
                         modifier =
-                            Modifier.height(8.dp)
+                            Modifier.height(
+                                8.dp
+                            )
                     )
 
+
                     Text(
+
                         text =
                             "$completedTasks of 3 daily tasks completed",
 
@@ -279,8 +411,9 @@ fun HomeDashboardScreen(
             }
         }
 
+
         /*
-         * Explicit Search entry.
+         * Search shortcut
          */
         item {
 
@@ -290,10 +423,13 @@ fun HomeDashboardScreen(
             ) {
 
                 Row(
+
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
+                            .padding(
+                                16.dp
+                            ),
 
                     horizontalArrangement =
                         Arrangement
@@ -306,10 +442,13 @@ fun HomeDashboardScreen(
 
                     Column(
                         modifier =
-                            Modifier.weight(1f)
+                            Modifier.weight(
+                                1f
+                            )
                     ) {
 
                         Text(
+
                             text =
                                 "Search Health Content",
 
@@ -319,12 +458,17 @@ fun HomeDashboardScreen(
                                     .titleMedium
                         )
 
+
                         Spacer(
                             modifier =
-                                Modifier.height(4.dp)
+                                Modifier.height(
+                                    4.dp
+                                )
                         )
 
+
                         Text(
+
                             text =
                                 "Search mood records and access health features.",
 
@@ -335,19 +479,23 @@ fun HomeDashboardScreen(
                         )
                     }
 
+
                     TextButton(
                         onClick =
                             onSearchClick
                     ) {
 
-                        Text("Search")
+                        Text(
+                            "Search"
+                        )
                     }
                 }
             }
         }
 
+
         /*
-         * Explicit P4 Data Visualization entry.
+         * Health Trends shortcut
          */
         item {
 
@@ -357,10 +505,13 @@ fun HomeDashboardScreen(
             ) {
 
                 Row(
+
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
+                            .padding(
+                                16.dp
+                            ),
 
                     horizontalArrangement =
                         Arrangement
@@ -373,10 +524,13 @@ fun HomeDashboardScreen(
 
                     Column(
                         modifier =
-                            Modifier.weight(1f)
+                            Modifier.weight(
+                                1f
+                            )
                     ) {
 
                         Text(
+
                             text =
                                 "Health Trends",
 
@@ -386,12 +540,17 @@ fun HomeDashboardScreen(
                                     .titleMedium
                         )
 
+
                         Spacer(
                             modifier =
-                                Modifier.height(4.dp)
+                                Modifier.height(
+                                    4.dp
+                                )
                         )
 
+
                         Text(
+
                             text =
                                 "View your mood and health trends over time.",
 
@@ -402,21 +561,30 @@ fun HomeDashboardScreen(
                         )
                     }
 
+
                     TextButton(
                         onClick =
                             onHealthTrendsClick
                     ) {
 
-                        Text("View")
+                        Text(
+                            "View"
+                        )
                     }
                 }
             }
         }
 
+
+        /*
+         * Latest Mood
+         */
         item {
 
             Text(
-                text = "Latest Mood",
+
+                text =
+                    "Latest Mood",
 
                 style =
                     MaterialTheme
@@ -424,10 +592,14 @@ fun HomeDashboardScreen(
                         .titleMedium
             )
 
+
             Spacer(
                 modifier =
-                    Modifier.height(8.dp)
+                    Modifier.height(
+                        8.dp
+                    )
             )
+
 
             Card(
                 modifier =
@@ -435,10 +607,13 @@ fun HomeDashboardScreen(
             ) {
 
                 Row(
+
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
+                            .padding(
+                                16.dp
+                            ),
 
                     verticalAlignment =
                         Alignment
@@ -451,10 +626,13 @@ fun HomeDashboardScreen(
 
                     Column(
                         modifier =
-                            Modifier.weight(1f)
+                            Modifier.weight(
+                                1f
+                            )
                     ) {
 
                         Text(
+
                             text =
                                 latestMoodEntry
                                     ?.mood
@@ -466,10 +644,13 @@ fun HomeDashboardScreen(
                                     .titleMedium
                         )
 
+
                         Text(
+
                             text =
                                 if (
-                                    latestMoodEntry != null
+                                    latestMoodEntry
+                                    != null
                                 ) {
 
                                     formatDate(
@@ -489,14 +670,17 @@ fun HomeDashboardScreen(
                         )
                     }
 
+
                     Button(
                         onClick =
                             onMoodClick
                     ) {
 
                         Text(
+
                             if (
-                                latestMoodEntry == null
+                                latestMoodEntry
+                                == null
                             ) {
                                 "Add Mood"
                             } else {
@@ -508,9 +692,14 @@ fun HomeDashboardScreen(
             }
         }
 
+
+        /*
+         * Daily checklist
+         */
         item {
 
             Text(
+
                 text =
                     "Today's Checklist",
 
@@ -520,6 +709,7 @@ fun HomeDashboardScreen(
                         .titleMedium
             )
 
+
             Card(
                 modifier =
                     Modifier.fillMaxWidth()
@@ -527,10 +717,13 @@ fun HomeDashboardScreen(
 
                 Column(
                     modifier =
-                        Modifier.padding(8.dp)
+                        Modifier.padding(
+                            8.dp
+                        )
                 ) {
 
                     ChecklistItem(
+
                         text =
                             "Mood diary completed",
 
@@ -542,7 +735,9 @@ fun HomeDashboardScreen(
                         }
                     )
 
+
                     ChecklistItem(
+
                         text =
                             "Take medication",
 
@@ -550,12 +745,15 @@ fun HomeDashboardScreen(
                             medicationCompleted,
 
                         onCheckedChange = {
+
                             medicationCompleted =
                                 it
                         }
                     )
 
+
                     ChecklistItem(
+
                         text =
                             "Home exercise completed",
 
@@ -563,6 +761,7 @@ fun HomeDashboardScreen(
                             exerciseCompleted,
 
                         onCheckedChange = {
+
                             exerciseCompleted =
                                 it
                         }
@@ -571,9 +770,14 @@ fun HomeDashboardScreen(
             }
         }
 
+
+        /*
+         * Recent Mood
+         */
         item {
 
             Text(
+
                 text =
                     "Recent Mood Records",
 
@@ -584,8 +788,10 @@ fun HomeDashboardScreen(
             )
         }
 
+
         if (
-            recentMoodEntries.isEmpty()
+            recentMoodEntries
+                .isEmpty()
         ) {
 
             item {
@@ -596,11 +802,14 @@ fun HomeDashboardScreen(
                 ) {
 
                     Text(
+
                         text =
                             "No mood records yet.",
 
                         modifier =
-                            Modifier.padding(16.dp),
+                            Modifier.padding(
+                                16.dp
+                            ),
 
                         style =
                             MaterialTheme
@@ -613,7 +822,12 @@ fun HomeDashboardScreen(
         } else {
 
             items(
-                recentMoodEntries
+                items =
+                    recentMoodEntries,
+
+                key = {
+                    it.id
+                }
             ) { entry ->
 
                 Card(
@@ -622,10 +836,13 @@ fun HomeDashboardScreen(
                 ) {
 
                     Row(
+
                         modifier =
                             Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp),
+                                .padding(
+                                    16.dp
+                                ),
 
                         horizontalArrangement =
                             Arrangement
@@ -639,6 +856,7 @@ fun HomeDashboardScreen(
                         Column {
 
                             Text(
+
                                 text =
                                     formatDate(
                                         entry.dateMillis
@@ -650,7 +868,9 @@ fun HomeDashboardScreen(
                                         .bodyMedium
                             )
 
+
                             Text(
+
                                 text =
                                     entry.mood,
 
@@ -661,21 +881,26 @@ fun HomeDashboardScreen(
                             )
                         }
 
+
                         TextButton(
                             onClick =
                                 onViewAllMoodClick
                         ) {
 
-                            Text("View")
+                            Text(
+                                "View"
+                            )
                         }
                     }
                 }
             }
         }
 
+
         item {
 
             TextButton(
+
                 onClick =
                     onViewAllMoodClick,
 
@@ -688,22 +913,32 @@ fun HomeDashboardScreen(
                 )
             }
 
+
             Spacer(
                 modifier =
-                    Modifier.height(16.dp)
+                    Modifier.height(
+                        16.dp
+                    )
             )
         }
     }
 }
 
+
 @Composable
 private fun ChecklistItem(
+
     text: String,
+
     checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+
+    onCheckedChange:
+        (Boolean) -> Unit
+
 ) {
 
     Row(
+
         modifier =
             Modifier.fillMaxWidth(),
 
@@ -712,13 +947,19 @@ private fun ChecklistItem(
     ) {
 
         Checkbox(
-            checked = checked,
+
+            checked =
+                checked,
+
             onCheckedChange =
                 onCheckedChange
         )
 
+
         Text(
-            text = text,
+
+            text =
+                text,
 
             style =
                 MaterialTheme
@@ -728,6 +969,31 @@ private fun ChecklistItem(
     }
 }
 
+
+/*
+ * Used to determine whether a mood record
+ * belongs to today.
+ */
+private fun isSameDay(
+    firstMillis: Long,
+    secondMillis: Long
+): Boolean {
+
+    val formatter =
+        java.text.SimpleDateFormat(
+            "yyyyMMdd",
+            java.util.Locale.getDefault()
+        )
+
+    return formatter.format(
+        java.util.Date(firstMillis)
+    ) ==
+            formatter.format(
+                java.util.Date(secondMillis)
+            )
+}
+
+
 @Preview(
     showBackground = true,
     showSystemUi = true
@@ -735,48 +1001,8 @@ private fun ChecklistItem(
 @Composable
 private fun HomeDashboardScreenPreview() {
 
-    val previewEntries =
-        listOf(
-            MoodDiaryEntry(
-                dateMillis =
-                    createDateMillis(
-                        2026,
-                        9,
-                        8
-                    ),
-
-                mood = "Good",
-
-                factors =
-                    listOf("Exercise"),
-
-                notes =
-                    "Had a productive day."
-            ),
-
-            MoodDiaryEntry(
-                dateMillis =
-                    createDateMillis(
-                        2026,
-                        9,
-                        7
-                    ),
-
-                mood = "Neutral",
-
-                factors =
-                    listOf("Sleep"),
-
-                notes =
-                    "Feeling tired."
-            )
-        )
-
     _304HealthTheme {
 
-        HomeDashboardScreen(
-            moodEntries =
-                previewEntries
-        )
+        HomeDashboardScreen()
     }
 }

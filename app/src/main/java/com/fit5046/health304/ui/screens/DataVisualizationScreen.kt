@@ -15,6 +15,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -25,16 +27,40 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.fit5046.health304.data.MoodEntry
 import com.fit5046.health304.ui.theme._304HealthTheme
+import com.fit5046.health304.viewmodel.MoodViewModel
+import com.google.firebase.auth.FirebaseAuth
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+
 @Composable
 fun DataVisualizationScreen(
-    moodEntries: List<MoodDiaryEntry> = emptyList(),
-    onBackClick: () -> Unit = {}
+
+    onBackClick: () -> Unit = {},
+
+    moodViewModel: MoodViewModel = viewModel()
+
 ) {
+
+    val userId =
+        FirebaseAuth
+            .getInstance()
+            .currentUser
+            ?.uid
+            ?: return
+
+
+    val moodEntries by
+    moodViewModel
+        .getMoodEntries(userId)
+        .collectAsState(
+            initial = emptyList()
+        )
+
 
     val recentEntries =
         moodEntries
@@ -43,12 +69,15 @@ fun DataVisualizationScreen(
             }
             .takeLast(7)
 
+
     val moodScores =
         recentEntries.map {
+
             moodToScore(
                 it.mood
             )
         }
+
 
     val averageMood =
         if (
@@ -62,12 +91,15 @@ fun DataVisualizationScreen(
             moodScores.average()
         }
 
+
     val averageMoodLabel =
         moodLabelFromAverage(
             averageMood
         )
 
+
     Column(
+
         modifier =
             Modifier
                 .fillMaxSize()
@@ -82,10 +114,14 @@ fun DataVisualizationScreen(
                 onBackClick
         ) {
 
-            Text("← Back")
+            Text(
+                "← Back"
+            )
         }
 
+
         Text(
+
             text =
                 "Health Trends",
 
@@ -95,12 +131,17 @@ fun DataVisualizationScreen(
                     .headlineMedium
         )
 
+
         Spacer(
             modifier =
-                Modifier.height(4.dp)
+                Modifier.height(
+                    4.dp
+                )
         )
 
+
         Text(
+
             text =
                 "Your recent wellness overview",
 
@@ -110,12 +151,17 @@ fun DataVisualizationScreen(
                     .bodyMedium
         )
 
+
         Spacer(
             modifier =
-                Modifier.height(20.dp)
+                Modifier.height(
+                    20.dp
+                )
         )
 
+
         MoodSummaryCard(
+
             averageMood =
                 averageMood,
 
@@ -123,36 +169,51 @@ fun DataVisualizationScreen(
                 averageMoodLabel,
 
             hasData =
-                moodScores.isNotEmpty()
+                moodScores
+                    .isNotEmpty()
         )
+
 
         Spacer(
             modifier =
-                Modifier.height(16.dp)
+                Modifier.height(
+                    16.dp
+                )
         )
+
 
         MoodTrendCard(
             entries =
                 recentEntries
         )
 
+
         Spacer(
             modifier =
-                Modifier.height(16.dp)
+                Modifier.height(
+                    16.dp
+                )
         )
+
 
         HeartRateCard()
     }
 }
 
+
 @Composable
 private fun MoodSummaryCard(
+
     averageMood: Double,
+
     moodLabel: String,
+
     hasData: Boolean
+
 ) {
 
     Card(
+
         modifier =
             Modifier.fillMaxWidth(),
 
@@ -163,10 +224,13 @@ private fun MoodSummaryCard(
     ) {
 
         Row(
+
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(20.dp),
+                    .padding(
+                        20.dp
+                    ),
 
             verticalAlignment =
                 Alignment.CenterVertically,
@@ -179,6 +243,7 @@ private fun MoodSummaryCard(
             Column {
 
                 Text(
+
                     text =
                         "Average Mood",
 
@@ -188,14 +253,21 @@ private fun MoodSummaryCard(
                             .bodyMedium
                 )
 
+
                 Spacer(
                     modifier =
-                        Modifier.height(6.dp)
+                        Modifier.height(
+                            6.dp
+                        )
                 )
 
+
                 Text(
+
                     text =
-                        if (hasData) {
+                        if (
+                            hasData
+                        ) {
                             moodLabel
                         } else {
                             "No data"
@@ -208,9 +280,13 @@ private fun MoodSummaryCard(
                         FontWeight.Bold
                 )
 
+
                 Text(
+
                     text =
-                        if (hasData) {
+                        if (
+                            hasData
+                        ) {
 
                             String.format(
                                 Locale.getDefault(),
@@ -230,13 +306,20 @@ private fun MoodSummaryCard(
                 )
             }
 
+
             Text(
+
                 text =
-                    if (hasData) {
+                    if (
+                        hasData
+                    ) {
+
                         moodEmoji(
                             averageMood
                         )
+
                     } else {
+
                         "—"
                     },
 
@@ -247,12 +330,14 @@ private fun MoodSummaryCard(
     }
 }
 
+
 @Composable
 private fun MoodTrendCard(
-    entries: List<MoodDiaryEntry>
+    entries: List<MoodEntry>
 ) {
 
     Card(
+
         modifier =
             Modifier.fillMaxWidth(),
 
@@ -264,10 +349,13 @@ private fun MoodTrendCard(
 
         Column(
             modifier =
-                Modifier.padding(20.dp)
+                Modifier.padding(
+                    20.dp
+                )
         ) {
 
             Text(
+
                 text =
                     "Mood Trend",
 
@@ -277,12 +365,17 @@ private fun MoodTrendCard(
                         .titleMedium
             )
 
+
             Spacer(
                 modifier =
-                    Modifier.height(4.dp)
+                    Modifier.height(
+                        4.dp
+                    )
             )
 
+
             Text(
+
                 text =
                     "Latest ${entries.size} mood records",
 
@@ -292,16 +385,21 @@ private fun MoodTrendCard(
                         .bodySmall
             )
 
+
             Spacer(
                 modifier =
-                    Modifier.height(18.dp)
+                    Modifier.height(
+                        18.dp
+                    )
             )
+
 
             if (
                 entries.isEmpty()
             ) {
 
                 Text(
+
                     text =
                         "No mood records available.",
 
@@ -314,11 +412,15 @@ private fun MoodTrendCard(
                 return@Column
             }
 
+
             Canvas(
+
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .height(150.dp)
+                        .height(
+                            150.dp
+                        )
             ) {
 
                 val leftPadding =
@@ -333,19 +435,21 @@ private fun MoodTrendCard(
                 val bottomPadding =
                     size.height * 0.10f
 
+
                 val usableWidth =
                     size.width -
                             leftPadding -
                             rightPadding
+
 
                 val usableHeight =
                     size.height -
                             topPadding -
                             bottomPadding
 
+
                 /*
-                 * Draw subtle horizontal
-                 * reference lines.
+                 * Draw horizontal reference lines.
                  */
                 for (
                 level in 1..5
@@ -359,11 +463,14 @@ private fun MoodTrendCard(
                                         ) *
                                 usableHeight
 
+
                     drawLine(
+
                         color =
                             Color.LightGray
                                 .copy(
-                                    alpha = 0.35f
+                                    alpha =
+                                        0.35f
                                 ),
 
                         start =
@@ -384,6 +491,7 @@ private fun MoodTrendCard(
                     )
                 }
 
+
                 val points =
                     entries.mapIndexed {
                             index,
@@ -393,6 +501,7 @@ private fun MoodTrendCard(
                             moodToScore(
                                 entry.mood
                             )
+
 
                         val x =
                             if (
@@ -414,6 +523,7 @@ private fun MoodTrendCard(
                                         index
                             }
 
+
                         val y =
                             topPadding +
                                     (
@@ -422,11 +532,13 @@ private fun MoodTrendCard(
                                             ) *
                                     usableHeight
 
+
                         Offset(
                             x,
                             y
                         )
                     }
+
 
                 if (
                     points.size >= 2
@@ -435,10 +547,12 @@ private fun MoodTrendCard(
                     val path =
                         Path()
 
+
                     path.moveTo(
                         points.first().x,
                         points.first().y
                     )
+
 
                     points
                         .drop(1)
@@ -451,7 +565,9 @@ private fun MoodTrendCard(
                             )
                         }
 
+
                     drawPath(
+
                         path =
                             path,
 
@@ -462,15 +578,18 @@ private fun MoodTrendCard(
 
                         style =
                             Stroke(
-                                width = 6f
+                                width =
+                                    6f
                             )
                     )
                 }
+
 
                 points.forEach {
                         point ->
 
                     drawCircle(
+
                         color =
                             Color(
                                 0xFF6750A4
@@ -485,12 +604,17 @@ private fun MoodTrendCard(
                 }
             }
 
+
             Spacer(
                 modifier =
-                    Modifier.height(8.dp)
+                    Modifier.height(
+                        8.dp
+                    )
             )
 
+
             Row(
+
                 modifier =
                     Modifier.fillMaxWidth(),
 
@@ -502,6 +626,7 @@ private fun MoodTrendCard(
                         entry ->
 
                     Text(
+
                         text =
                             formatShortDate(
                                 entry.dateMillis
@@ -521,10 +646,12 @@ private fun MoodTrendCard(
     }
 }
 
+
 @Composable
 private fun HeartRateCard() {
 
     Card(
+
         modifier =
             Modifier.fillMaxWidth(),
 
@@ -536,20 +663,25 @@ private fun HeartRateCard() {
 
         Column(
             modifier =
-                Modifier.padding(20.dp)
+                Modifier.padding(
+                    20.dp
+                )
         ) {
 
             Row(
+
                 modifier =
                     Modifier.fillMaxWidth(),
 
                 horizontalArrangement =
-                    Arrangement.SpaceBetween
+                    Arrangement
+                        .SpaceBetween
             ) {
 
                 Column {
 
                     Text(
+
                         text =
                             "Heart Rate",
 
@@ -559,12 +691,17 @@ private fun HeartRateCard() {
                                 .titleMedium
                     )
 
+
                     Spacer(
                         modifier =
-                            Modifier.height(4.dp)
+                            Modifier.height(
+                                4.dp
+                            )
                     )
 
+
                     Text(
+
                         text =
                             "Simulated sensor data",
 
@@ -575,12 +712,14 @@ private fun HeartRateCard() {
                     )
                 }
 
+
                 Column(
                     horizontalAlignment =
                         Alignment.End
                 ) {
 
                     Text(
+
                         text =
                             "72",
 
@@ -591,7 +730,9 @@ private fun HeartRateCard() {
                             FontWeight.Bold
                     )
 
+
                     Text(
+
                         text =
                             "bpm",
 
@@ -603,62 +744,79 @@ private fun HeartRateCard() {
                 }
             }
 
+
             Spacer(
                 modifier =
-                    Modifier.height(18.dp)
+                    Modifier.height(
+                        18.dp
+                    )
             )
 
+
             Canvas(
+
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .height(80.dp)
+                        .height(
+                            80.dp
+                        )
             ) {
 
                 val path =
                     Path()
+
 
                 path.moveTo(
                     0f,
                     size.height * 0.60f
                 )
 
+
                 path.lineTo(
                     size.width * 0.15f,
                     size.height * 0.60f
                 )
+
 
                 path.lineTo(
                     size.width * 0.25f,
                     size.height * 0.20f
                 )
 
+
                 path.lineTo(
                     size.width * 0.35f,
                     size.height * 0.75f
                 )
+
 
                 path.lineTo(
                     size.width * 0.50f,
                     size.height * 0.50f
                 )
 
+
                 path.lineTo(
                     size.width * 0.65f,
                     size.height * 0.55f
                 )
+
 
                 path.lineTo(
                     size.width * 0.78f,
                     size.height * 0.25f
                 )
 
+
                 path.lineTo(
                     size.width,
                     size.height * 0.58f
                 )
 
+
                 drawPath(
+
                     path =
                         path,
 
@@ -669,13 +827,15 @@ private fun HeartRateCard() {
 
                     style =
                         Stroke(
-                            width = 5f
+                            width =
+                                5f
                         )
                 )
             }
         }
     }
 }
+
 
 private fun moodToScore(
     mood: String
@@ -685,15 +845,26 @@ private fun moodToScore(
         mood
     ) {
 
-        "Very Good" -> 5
-        "Good" -> 4
-        "Neutral" -> 3
-        "Stressed" -> 2
-        "Low" -> 1
+        "Very Good" ->
+            5
 
-        else -> 3
+        "Good" ->
+            4
+
+        "Neutral" ->
+            3
+
+        "Stressed" ->
+            2
+
+        "Low" ->
+            1
+
+        else ->
+            3
     }
 }
+
 
 private fun moodLabelFromAverage(
     average: Double
@@ -721,6 +892,7 @@ private fun moodLabelFromAverage(
     }
 }
 
+
 private fun moodEmoji(
     average: Double
 ): String {
@@ -744,6 +916,7 @@ private fun moodEmoji(
     }
 }
 
+
 private fun formatShortDate(
     dateMillis: Long
 ): String {
@@ -752,9 +925,12 @@ private fun formatShortDate(
         "d MMM",
         Locale.getDefault()
     ).format(
-        Date(dateMillis)
+        Date(
+            dateMillis
+        )
     )
 }
+
 
 @Preview(
     showBackground = true,
@@ -763,78 +939,8 @@ private fun formatShortDate(
 @Composable
 private fun DataVisualizationScreenPreview() {
 
-    val previewEntries =
-        listOf(
-            MoodDiaryEntry(
-                dateMillis =
-                    createDateMillis(
-                        2026,
-                        9,
-                        5
-                    ),
-
-                mood = "Neutral",
-
-                factors =
-                    emptyList(),
-
-                notes = ""
-            ),
-
-            MoodDiaryEntry(
-                dateMillis =
-                    createDateMillis(
-                        2026,
-                        9,
-                        6
-                    ),
-
-                mood = "Stressed",
-
-                factors =
-                    listOf("Study / Work"),
-
-                notes = ""
-            ),
-
-            MoodDiaryEntry(
-                dateMillis =
-                    createDateMillis(
-                        2026,
-                        9,
-                        7
-                    ),
-
-                mood = "Good",
-
-                factors =
-                    listOf("Exercise"),
-
-                notes = ""
-            ),
-
-            MoodDiaryEntry(
-                dateMillis =
-                    createDateMillis(
-                        2026,
-                        9,
-                        8
-                    ),
-
-                mood = "Very Good",
-
-                factors =
-                    listOf("Exercise"),
-
-                notes = ""
-            )
-        )
-
     _304HealthTheme {
 
-        DataVisualizationScreen(
-            moodEntries =
-                previewEntries
-        )
+        DataVisualizationScreen()
     }
 }

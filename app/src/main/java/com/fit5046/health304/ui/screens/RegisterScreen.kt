@@ -1,6 +1,5 @@
 package com.fit5046.health304.ui.screens
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -8,8 +7,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -28,21 +31,36 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.fit5046.health304.ui.theme._304HealthTheme
+import com.fit5046.health304.viewmodel.AuthViewModel
 
 /**
- * Register screen (static UI for A2 skeleton prototype — no real account creation logic yet).
+ * Register screen connected to Firebase Authentication through AuthViewModel.
  *
- * Design guidelines applied here (Week 6 seminar), same two as LoginScreen:
- * 1. Show/hide password toggle (applied to both Password and Confirm Password fields)
- * 2. Clearly visible password requirement hint, so users know the format before they get an error
- *
- * @param onRegisterClick called when the user taps the Register button, with the collected fields
- * @param onNavigateToLogin called when the user taps "Log in" (already have an account)
  */
 @Composable
 fun RegisterScreen(
-    onRegisterClick: (name: String, email: String, password: String) -> Unit = { _, _, _ -> },
-    onNavigateToLogin: () -> Unit = {}
+    authViewModel: AuthViewModel,
+    onRegisterSuccess: () -> Unit,
+    onNavigateToLogin: () -> Unit
+) {
+    RegisterContent(
+        isLoading = authViewModel.isLoading,
+        errorMessage = authViewModel.errorMessage,
+        onRegisterClick = { firstName, lastName, email, password ->
+            authViewModel.register(firstName, lastName, email, password, onRegisterSuccess)
+        },
+        onInputChanged = { authViewModel.clearError() },
+        onNavigateToLogin = onNavigateToLogin
+    )
+}
+
+@Composable
+fun RegisterContent(
+    isLoading: Boolean,
+    errorMessage: String?,
+    onRegisterClick: (firstName: String, lastName: String, email: String, password: String) -> Unit,
+    onInputChanged: () -> Unit,
+    onNavigateToLogin: () -> Unit
 ) {
     var firstName by remember { mutableStateOf("") }
     var lastName by remember { mutableStateOf("") }
@@ -51,16 +69,25 @@ fun RegisterScreen(
     var confirmPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
+    var submitted by remember { mutableStateOf(false) }
 
-    // Simple client-side check just so the button can be disabled sensibly in the prototype.
-    val passwordsMatch = confirmPassword.isEmpty() || password == confirmPassword
+    val firstNameError = if (submitted) validateRequired(firstName, "First name") else null
+    val lastNameError = if (submitted) validateRequired(lastName, "Last name") else null
+    val emailError = if (submitted) validateEmail(email) else null
+    val passwordError = if (submitted) validateNewPassword(password) else null
+    // Mismatch is shown immediately; "empty" only after submitting
+    val confirmError = when {
+        confirmPassword.isNotEmpty() && confirmPassword != password -> "Passwords don't match"
+        submitted && confirmPassword.isEmpty() -> "Please confirm your password"
+        else -> null
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp, vertical = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
             text = "Create Account",
@@ -76,44 +103,56 @@ fun RegisterScreen(
             textAlign = TextAlign.Center
         )
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(4.dp))
+
+        Text(
+            text = "* Required",
+            style = MaterialTheme.typography.bodySmall
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
 
         OutlinedTextField(
             value = firstName,
-            onValueChange = { firstName = it },
-            label = { Text("First Name") },
+            onValueChange = { firstName = it; onInputChanged() },
+            label = { Text("First Name *") },
             singleLine = true,
+            isError = firstNameError != null,
+            supportingText = { firstNameError?.let { Text(it) } },
             modifier = Modifier.fillMaxWidth()
         )
-
-        Spacer(modifier = Modifier.height(16.dp))
 
         OutlinedTextField(
             value = lastName,
-            onValueChange = { lastName = it },
-            label = { Text("Last Name") },
+            onValueChange = { lastName = it; onInputChanged() },
+            label = { Text("Last Name *") },
             singleLine = true,
+            isError = lastNameError != null,
+            supportingText = { lastNameError?.let { Text(it) } },
             modifier = Modifier.fillMaxWidth()
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
-
         OutlinedTextField(
             value = email,
-            onValueChange = { email = it },
-            label = { Text("Email") },
+            onValueChange = { email = it; onInputChanged() },
+            label = { Text("Email *") },
             singleLine = true,
+            isError = emailError != null,
+            supportingText = { emailError?.let { Text(it) } },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
             modifier = Modifier.fillMaxWidth()
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
-
         OutlinedTextField(
             value = password,
-            onValueChange = { password = it },
-            label = { Text("Password") },
+            onValueChange = { password = it; onInputChanged() },
+            label = { Text("Password *") },
             singleLine = true,
+            isError = passwordError != null,
+            // Guideline 2: the requirement is always visible; it turns into the error when invalid
+            supportingText = {
+                Text(passwordError ?: "Must be at least 8 characters, including a number")
+            },
             visualTransformation = if (passwordVisible) {
                 VisualTransformation.None
             } else {
@@ -121,7 +160,7 @@ fun RegisterScreen(
             },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             trailingIcon = {
-                // Guideline 1: show/hide password toggle.
+                // Guideline 1: show/hide password toggle
                 TextButton(onClick = { passwordVisible = !passwordVisible }) {
                     Text(if (passwordVisible) "Hide" else "Show")
                 }
@@ -129,22 +168,13 @@ fun RegisterScreen(
             modifier = Modifier.fillMaxWidth()
         )
 
-        Spacer(modifier = Modifier.height(4.dp))
-
-        // Guideline 2: visible password requirement hint shown up-front, not just after an error.
-        Text(
-            text = "Must be at least 8 characters, including a number",
-            style = MaterialTheme.typography.bodySmall
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
         OutlinedTextField(
             value = confirmPassword,
-            onValueChange = { confirmPassword = it },
-            label = { Text("Confirm password") },
+            onValueChange = { confirmPassword = it; onInputChanged() },
+            label = { Text("Confirm Password *") },
             singleLine = true,
-            isError = !passwordsMatch,
+            isError = confirmError != null,
+            supportingText = { confirmError?.let { Text(it) } },
             visualTransformation = if (confirmPasswordVisible) {
                 VisualTransformation.None
             } else {
@@ -156,22 +186,44 @@ fun RegisterScreen(
                     Text(if (confirmPasswordVisible) "Hide" else "Show")
                 }
             },
-            supportingText = {
-                if (!passwordsMatch) {
-                    Text("Passwords don't match")
-                }
-            },
             modifier = Modifier.fillMaxWidth()
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         Button(
-            onClick = { onRegisterClick("$firstName $lastName", email, password) },
-            enabled = passwordsMatch,
+            onClick = {
+                submitted = true
+                val formValid = validateRequired(firstName, "First name") == null &&
+                        validateRequired(lastName, "Last name") == null &&
+                        validateEmail(email) == null &&
+                        validateNewPassword(password) == null &&
+                        confirmPassword == password
+                if (formValid) {
+                    onRegisterClick(firstName.trim(), lastName.trim(), email.trim(), password)
+                }
+            },
+            enabled = !isLoading,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Register")
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp
+                )
+            } else {
+                Text("Register")
+            }
+        }
+
+        if (errorMessage != null) {
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = errorMessage,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center
+            )
         }
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -192,6 +244,12 @@ fun RegisterScreen(
 @Composable
 fun RegisterScreenPreview() {
     _304HealthTheme {
-        RegisterScreen()
+        RegisterContent(
+            isLoading = false,
+            errorMessage = null,
+            onRegisterClick = { _, _, _, _ -> },
+            onInputChanged = {},
+            onNavigateToLogin = {}
+        )
     }
 }

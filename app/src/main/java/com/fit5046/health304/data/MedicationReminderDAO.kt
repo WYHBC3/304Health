@@ -10,6 +10,9 @@ interface MedicationReminderDAO {
     @Query("SELECT * FROM medication_reminders WHERE userId = :userId ORDER BY hour, minute, id")
     fun getReminders(userId: String): Flow<List<MedicationReminder>>
 
+    @Query("SELECT * FROM medication_reminders WHERE id = :id AND userId = :userId")
+    suspend fun getReminder(id: Long, userId: String): MedicationReminder?
+
     @Insert
     suspend fun insert(reminder: MedicationReminder): Long
 

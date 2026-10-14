@@ -19,6 +19,28 @@ import java.util.UUID
 class P2RoomTest {
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
 
+    @Test fun moodSchemaUpgradeKeepsExistingPreferencesAndMedication() = runBlocking {
+        val name = "p2-v3-upgrade-${UUID.randomUUID()}.db"
+        val path = context.getDatabasePath(name)
+        path.parentFile?.mkdirs()
+        SQLiteDatabase.openOrCreateDatabase(path, null).use { legacy ->
+            legacy.execSQL("CREATE TABLE users (uid TEXT NOT NULL PRIMARY KEY, firstName TEXT NOT NULL, lastName TEXT NOT NULL, email TEXT NOT NULL, createdAt INTEGER NOT NULL)")
+            legacy.execSQL("CREATE TABLE health_preferences (userId TEXT NOT NULL PRIMARY KEY, dateOfBirthMillis INTEGER NOT NULL, healthGoal TEXT NOT NULL, activityLevel TEXT NOT NULL, updatedAt INTEGER NOT NULL)")
+            legacy.execSQL("CREATE TABLE medication_reminders (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, userId TEXT NOT NULL, medicationName TEXT NOT NULL, hour INTEGER NOT NULL, minute INTEGER NOT NULL, reminderEnabled INTEGER NOT NULL, createdAt INTEGER NOT NULL)")
+            legacy.execSQL("CREATE INDEX index_medication_reminders_userId ON medication_reminders(userId)")
+            legacy.execSQL("INSERT INTO health_preferences VALUES ('account-a', 946684800000, 'Improve sleep', 'Low', 1)")
+            legacy.execSQL("INSERT INTO medication_reminders VALUES (1, 'account-a', 'Test Vitamin', 8, 0, 1, 1)")
+            legacy.version = 3
+        }
+        val db = Room.databaseBuilder(context, AppDatabase::class.java, name)
+            .addMigrations(AppDatabase.MIGRATION_3_4).build()
+        try {
+            assertEquals("Improve sleep", db.healthPreferencesDAO().getPreferences("account-a").first()?.healthGoal)
+            assertEquals("Test Vitamin", db.medicationReminderDAO().getReminders("account-a").first().single().medicationName)
+            assertTrue(db.moodDAO().getMoodEntries("account-a").first().isEmpty())
+        } finally { db.close(); context.deleteDatabase(name) }
+    }
+
     @Test fun preferencesPersistPerAccountAndSaveReplacesOnlyThatAccount() = runBlocking {
         val db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build()
         try {
@@ -59,7 +81,7 @@ class P2RoomTest {
             legacy.version = 1
         }
         val db = Room.databaseBuilder(context, AppDatabase::class.java, name)
-            .addMigrations(AppDatabase.MIGRATION_1_3).build()
+            .addMigrations(AppDatabase.MIGRATION_1_3, AppDatabase.MIGRATION_3_4).build()
         try {
             assertEquals("Test", db.userDAO().getUser("account-a").first()?.firstName)
             db.healthPreferencesDAO().save(HealthPreferences("account-a", 946684800000L, "Improve sleep", "Low"))

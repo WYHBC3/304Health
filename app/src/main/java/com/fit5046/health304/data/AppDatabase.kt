@@ -20,9 +20,11 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         User::class,
         HealthPreferences::class,
         MedicationReminder::class,
-        MoodEntry::class
+        MoodEntry::class,
+        SensorReading::class,
+        Recommendation::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -31,6 +33,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun healthPreferencesDAO(): HealthPreferencesDAO
     abstract fun medicationReminderDAO(): MedicationReminderDAO
     abstract fun moodDAO(): MoodDAO
+    abstract fun sensorReadingDAO(): SensorReadingDAO
+    abstract fun recommendationDAO(): RecommendationDAO
 
     companion object {
         @Volatile

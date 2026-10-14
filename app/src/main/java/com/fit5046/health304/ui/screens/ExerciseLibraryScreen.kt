@@ -1,101 +1,90 @@
+
 package com.fit5046.health304.ui.screens
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import android.text.Html
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuAnchorType
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.fit5046.health304.ui.theme._304HealthTheme
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.fit5046.health304.model.WgerExercise
+import com.fit5046.health304.model.ExerciseTranslation
+import com.fit5046.health304.viewmodel.ExerciseUiState
+import com.fit5046.health304.viewmodel.ExerciseViewModel
 
+// Keep the existing callback type for compatibility.
 data class Exercise(
     val name: String,
     val category: String,
-    val difficulty: String,
-    val duration: String
+    val difficulty: String = "",
+    val duration: String = ""
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
+// Prefer the English translation (language ID 2).
+private fun getTranslation(
+    exercise: WgerExercise
+): ExerciseTranslation? {
+    return exercise.translations.firstOrNull {
+        it.language == 2 && it.name.isNotBlank()
+    } ?: exercise.translations.firstOrNull {
+        it.name.isNotBlank()
+    }
+}
+
+private fun getExerciseName(exercise: WgerExercise): String {
+    return getTranslation(exercise)?.name
+        ?.takeIf { it.isNotBlank() }
+        ?: "Exercise #${exercise.id}"
+}
+
+private fun getCategory(exercise: WgerExercise): String {
+    return exercise.category?.name ?: "Other"
+}
+
 @Composable
 fun ExerciseLibraryScreen(
     onExerciseClick: (Exercise) -> Unit = {}
 ) {
-    var searchText by remember { mutableStateOf("") }
-    var selectedCategory by remember { mutableStateOf("All") }
-    var categoryExpanded by remember { mutableStateOf(false) }
+    val exerciseViewModel: ExerciseViewModel = viewModel()
 
-    val categories = listOf(
-        "All",
-        "Stretching",
-        "Strength",
-        "Yoga",
-        "Cardio"
-    )
+    val uiState = exerciseViewModel.uiState
 
-    val exercises = listOf(
-        Exercise(
-            name = "Morning Stretch",
-            category = "Stretching",
-            difficulty = "Beginner",
-            duration = "10 min"
-        ),
-        Exercise(
-            name = "Chair Yoga",
-            category = "Yoga",
-            difficulty = "Beginner",
-            duration = "15 min"
-        ),
-        Exercise(
-            name = "Bodyweight Workout",
-            category = "Strength",
-            difficulty = "Intermediate",
-            duration = "20 min"
-        ),
-        Exercise(
-            name = "Indoor Cardio",
-            category = "Cardio",
-            difficulty = "Intermediate",
-            duration = "15 min"
-        ),
-        Exercise(
-            name = "Full Body Stretch",
-            category = "Stretching",
-            difficulty = "Beginner",
-            duration = "12 min"
-        )
-    )
+    var searchText by rememberSaveable {
+        mutableStateOf("")
+    }
+
+    var selectedCategory by rememberSaveable {
+        mutableStateOf("All")
+    }
+
+    var categoryExpanded by remember {
+        mutableStateOf(false)
+    }
+
+    // Data comes from the ViewModel, not a static list.
+    val exercises = when (uiState) {
+        is ExerciseUiState.Success -> uiState.exercises
+        else -> emptyList()
+    }
+
+    val categories = listOf("All") +
+            exercises.map { getCategory(it) }
+                .distinct()
+                .sorted()
 
     val filteredExercises = exercises.filter { exercise ->
-        val matchesSearch =
-            exercise.name.contains(searchText, ignoreCase = true)
+        val matchesSearch = getExerciseName(exercise)
+            .contains(searchText, ignoreCase = true)
 
         val matchesCategory =
             selectedCategory == "All" ||
-                    exercise.category == selectedCategory
+                    getCategory(exercise) == selectedCategory
 
         matchesSearch && matchesCategory
     }
@@ -103,7 +92,7 @@ fun ExerciseLibraryScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 24.dp, vertical = 24.dp)
+            .padding(24.dp)
     ) {
         Text(
             text = "Exercise Library",
@@ -115,30 +104,28 @@ fun ExerciseLibraryScreen(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Find simple exercises you can do at home",
+            text = "Explore exercises from the wger API",
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Center
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         OutlinedTextField(
             value = searchText,
             onValueChange = { searchText = it },
             label = { Text("Search exercises") },
-            placeholder = { Text("Enter exercise name") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
+        @OptIn(ExperimentalMaterial3Api::class)
         ExposedDropdownMenuBox(
             expanded = categoryExpanded,
-            onExpandedChange = {
-                categoryExpanded = it
-            }
+            onExpandedChange = { categoryExpanded = it }
         ) {
             OutlinedTextField(
                 value = selectedCategory,
@@ -165,9 +152,7 @@ fun ExerciseLibraryScreen(
             ) {
                 categories.forEach { category ->
                     DropdownMenuItem(
-                        text = {
-                            Text(category)
-                        },
+                        text = { Text(category) },
                         onClick = {
                             selectedCategory = category
                             categoryExpanded = false
@@ -177,32 +162,66 @@ fun ExerciseLibraryScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
-        Text(
-            text = "Available Exercises",
-            style = MaterialTheme.typography.titleMedium
-        )
+        when (val state = uiState) {
 
-        Spacer(modifier = Modifier.height(12.dp))
-
-        if (filteredExercises.isEmpty()) {
-            Text(
-                text = "No exercises found.",
-                style = MaterialTheme.typography.bodyMedium
-            )
-        } else {
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxSize()
-            ) {
-                items(filteredExercises) { exercise ->
-                    ExerciseCard(
-                        exercise = exercise,
-                        onExerciseClick = {
-                            onExerciseClick(exercise)
-                        }
+            is ExerciseUiState.Loading -> {
+                CircularProgressIndicator(
+                    modifier = Modifier.align(
+                        Alignment.CenterHorizontally
                     )
+                )
+                Text("Loading exercises...")
+            }
+
+            is ExerciseUiState.Error -> {
+                Text(
+                    text = "Failed to load: ${state.message}",
+                    color = MaterialTheme.colorScheme.error
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Button(
+                    onClick = {
+                        exerciseViewModel.loadExercises()
+                    }
+                ) {
+                    Text("Retry")
+                }
+            }
+
+            is ExerciseUiState.Empty -> {
+                Text("No exercises available from the API.")
+            }
+
+            is ExerciseUiState.Success -> {
+
+                Text(
+                    text = "Available Exercises (${filteredExercises.size})",
+                    style = MaterialTheme.typography.titleMedium
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                if (filteredExercises.isEmpty()) {
+                    Text("No exercises match your search.")
+                } else {
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        items(
+                            items = filteredExercises,
+                            key = { it.id }
+                        ) { exercise ->
+                            ExerciseCard(
+                                exercise = exercise,
+                                onExerciseClick = onExerciseClick
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -211,9 +230,17 @@ fun ExerciseLibraryScreen(
 
 @Composable
 private fun ExerciseCard(
-    exercise: Exercise,
-    onExerciseClick: () -> Unit
+    exercise: WgerExercise,
+    onExerciseClick: (Exercise) -> Unit
 ) {
+    val name = getExerciseName(exercise)
+    val category = getCategory(exercise)
+    val translation = getTranslation(exercise)
+
+    var showDetails by rememberSaveable(exercise.id) {
+        mutableStateOf(false)
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -221,48 +248,54 @@ private fun ExerciseCard(
             modifier = Modifier.padding(16.dp)
         ) {
             Text(
-                text = exercise.name,
+                text = name,
                 style = MaterialTheme.typography.titleMedium
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Text(
-                text = "Category: ${exercise.category}",
-                style = MaterialTheme.typography.bodyMedium
-            )
-
-            Text(
-                text = "Difficulty: ${exercise.difficulty}",
-                style = MaterialTheme.typography.bodyMedium
-            )
-
-            Text(
-                text = "Duration: ${exercise.duration}",
-                style = MaterialTheme.typography.bodyMedium
-            )
+            Text("Category: $category")
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Button(
-                    onClick = onExerciseClick
-                ) {
-                    Text("View Exercise")
+            Button(
+                onClick = {
+                    showDetails = !showDetails
+
+                    if (showDetails) {
+                        onExerciseClick(
+                            Exercise(
+                                name = name,
+                                category = category
+                            )
+                        )
+                    }
                 }
+            ) {
+                Text(
+                    if (showDetails) "Hide Details"
+                    else "View Exercise"
+                )
+            }
+
+            if (showDetails) {
+                Spacer(modifier = Modifier.height(12.dp))
+
+                val rawDescription =
+                    translation?.description.orEmpty()
+
+                val description = Html.fromHtml(
+                    rawDescription,
+                    Html.FROM_HTML_MODE_COMPACT
+                ).toString().trim()
+
+                Text(
+                    text = description.ifBlank {
+                        "No description available."
+                    },
+                    style = MaterialTheme.typography.bodyMedium
+                )
             }
         }
-    }
-}
-
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-private fun ExerciseLibraryScreenPreview() {
-    _304HealthTheme {
-        ExerciseLibraryScreen()
     }
 }

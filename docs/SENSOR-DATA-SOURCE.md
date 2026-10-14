@@ -22,10 +22,11 @@ At the end, replay starts over. In cumulative mode the source-day total resets a
 consumers must handle resets and MUST NOT sum cumulative samples. In interval mode steps can be
 summed for the simulated timeline, but repeated cycles are deliberately repeated source observations.
 
-P1 still needs to confirm INTERVAL versus CUMULATIVE and merge the SensorReading/DAO table.
+P1 confirmed INTERVAL steps and current insertion timestamps on 14 October.
+Firebase binding always selects INTERVAL. P1 still needs to merge the SensorReading/DAO table.
 The simulator is implemented and tested with an injected persistence callback, but is not yet bound
 in HealthApplication. After the interface is merged, keep one simulator instance in Application and call
-`bindToFirebase(mode) { sample -> dao.insert(SensorReading(userId = sample.userId,
+`bindToFirebase { sample -> dao.insert(SensorReading(userId = sample.userId,
 timestamp = sample.timestamp, heartRate = sample.heartRate, steps = sample.steps)) }`.
 Use the actual DAO accessor P1 commits, not a second database or duplicate table.
 

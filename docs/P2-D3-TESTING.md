@@ -32,7 +32,8 @@ An ordinary background app does not require the Meds screen to remain open.
 Real Kaggle source, extraction and both step interpretations are documented in SENSOR-DATA-SOURCE.md.
 The simulator exposes an injectable suspend insert callback and optional Firebase session binding.
 It runs every 5 seconds, wraps at the CSV end and logs successful insertions as SensorDataSimulator.
-P1's table/DAO and INTERVAL vs CUMULATIVE decision are required before production binding.
+P1 confirmed raw per-minute INTERVAL steps and current timestamps; Firebase binding now fixes that mode.
+P1's table/DAO is still required before production binding.
 Tests use a collecting callback at an accelerated interval, not the pending sensor_readings table.
 
 ## Verification
@@ -43,8 +44,8 @@ Actual OS notification delivery must additionally be confirmed using the signed-
 
 Verified 14 October: debug build passed; five D3 unit tests passed; six selected emulator tests
 (four Room/migration tests and two sensor replay tests) passed. The simulator's insert callback is
-tested; actual sensor_readings persistence is not yet connected. Actual notification popup is pending
-the user's permission grants and signed-in manual demo.
+tested; actual sensor_readings persistence is not yet connected. Junzhe confirmed that the signed-in
+manual notification test passed on 14 October (notification permissions enabled and popup received).
 
 Record AI assistance with these implementations, tests and real-data extraction in the A4 declaration;
 include your review, manual test results, and any changes made after testing.

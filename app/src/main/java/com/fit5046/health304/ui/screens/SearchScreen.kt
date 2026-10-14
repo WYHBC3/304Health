@@ -31,9 +31,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fit5046.health304.ui.theme._304HealthTheme
+import com.fit5046.health304.data.MedicationReminder
 import com.fit5046.health304.viewmodel.MoodViewModel
 import com.google.firebase.auth.FirebaseAuth
-
 
 data class SearchItem(
 
@@ -47,7 +47,7 @@ data class SearchItem(
 
 @Composable
 fun SearchScreen(
-
+    medicationReminders: List<MedicationReminder> = emptyList(),
     onBackClick: () -> Unit = {},
 
     onMoodClick: () -> Unit = {},
@@ -77,12 +77,12 @@ fun SearchScreen(
     /*
      * Real Mood Diary data from Room.
      */
-    val moodEntries by
-    moodViewModel
-        .getMoodEntries(userId)
-        .collectAsState(
-            initial = emptyList()
-        )
+    val moodFlow = remember(moodViewModel, userId) {
+        moodViewModel.getMoodEntries(userId)
+    }
+    val moodEntries by moodFlow.collectAsState(
+        initial = emptyList()
+    )
 
 
     var searchText by
@@ -189,6 +189,28 @@ fun SearchScreen(
      * These are navigation entries until
      * their full Room search is connected.
      */
+
+    // Convert actual Room medication records
+    // into searchable items.
+    val medicationSearchItems = medicationReminders.map { reminder ->
+
+        val time = "%02d:%02d".format(
+            reminder.hour,
+            reminder.minute
+        )
+
+        SearchItem(
+            title = reminder.medicationName,
+            type = "Medication",
+            description = "Reminder: $time · " +
+                    if (reminder.reminderEnabled) {
+                        "Enabled"
+                    } else {
+                        "Disabled"
+                    }
+        )
+    }
+
     val appItems =
         listOf(
 
@@ -234,6 +256,7 @@ fun SearchScreen(
 
     val searchItems =
         moodSearchItems +
+                medicationSearchItems +
                 appItems
 
 

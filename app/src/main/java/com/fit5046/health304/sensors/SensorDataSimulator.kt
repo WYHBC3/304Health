@@ -67,8 +67,10 @@ class SensorDataSimulator(context: Context, private val intervalMillis: Long = 5
 
     /** Call once from Application, not from a composable. Logout cancels the old job. */
     @Synchronized
-    fun bindToFirebase(mode: StepsMode, insert: suspend (SimulatedSensorReading) -> Unit) {
+    fun bindToFirebase(insert: suspend (SimulatedSensorReading) -> Unit) {
         check(authListener == null) { "Simulator is already bound to Firebase." }
+        // P1 contract: store raw source-minute steps, never a cumulative total.
+        val mode = StepsMode.INTERVAL
         val auth = FirebaseAuth.getInstance()
         val listener = FirebaseAuth.AuthStateListener {
             val uid = it.currentUser?.uid

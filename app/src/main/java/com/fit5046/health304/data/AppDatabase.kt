@@ -45,9 +45,19 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Preserve existing P2 user/preferences/medication data on v3 -> v4.
         val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("CREATE TABLE IF NOT EXISTS mood_entries (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, userId TEXT NOT NULL, dateMillis INTEGER NOT NULL, mood TEXT NOT NULL, factors TEXT NOT NULL, notes TEXT NOT NULL)")
+                db.execSQL(
+                    """CREATE TABLE IF NOT EXISTS mood_entries (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        userId TEXT NOT NULL,
+                        dateMillis INTEGER NOT NULL,
+                        mood TEXT NOT NULL,
+                        factors TEXT NOT NULL,
+                        notes TEXT NOT NULL
+                    )""".trimIndent()
+                )
             }
         }
 

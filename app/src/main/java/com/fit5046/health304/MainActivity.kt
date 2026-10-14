@@ -24,7 +24,7 @@ import com.fit5046.health304.ui.screens.MedicationReminderRoute
 import com.fit5046.health304.ui.screens.MoodDiaryScreen
 import com.fit5046.health304.ui.screens.ProfilePreferencesRoute
 import com.fit5046.health304.ui.screens.RegisterScreen
-import com.fit5046.health304.ui.screens.SearchScreen
+import com.fit5046.health304.ui.screens.SearchDataRoute
 import com.fit5046.health304.ui.theme._304HealthTheme
 import com.fit5046.health304.viewmodel.AuthViewModel
 
@@ -339,11 +339,11 @@ fun AppNavHost(
 
 
             /*
-             * Search
+             * Search: keep P3 navigation and P4 account-scoped medication data route.
              */
             composable("search") {
 
-                SearchScreen(
+                SearchDataRoute(
 
                     onBackClick = {
 
@@ -382,6 +382,7 @@ fun AppNavHost(
                     }
                 )
             }
+
         }
     }
 }

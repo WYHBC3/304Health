@@ -16,7 +16,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -35,6 +34,15 @@ import com.google.firebase.auth.FirebaseAuth
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.FilterChip
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import java.util.Calendar
 
 
 @Composable
@@ -46,37 +54,43 @@ fun DataVisualizationScreen(
 
 ) {
 
-    val userId =
-        FirebaseAuth
-            .getInstance()
-            .currentUser
-            ?.uid
-            ?: return
+    // P3: Observe real Room data scoped to the Firebase account.
+    val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
+    val moodFlow = remember(moodViewModel, userId) {
+        moodViewModel.getMoodEntries(userId)
+    }
+    val moodEntries by moodFlow.collectAsState(initial = emptyList())
 
-
-    val moodEntries by
-    moodViewModel
-        .getMoodEntries(userId)
-        .collectAsState(
-            initial = emptyList()
-        )
-
-
-    val recentEntries =
-        moodEntries
-            .sortedBy {
-                it.dateMillis
-            }
-            .takeLast(7)
+    // P4: Time range applies to every report component.
+    var selectedPeriod by rememberSaveable { mutableStateOf("All") }
+    val periods = listOf("Daily", "Weekly", "Monthly", "All")
+    val calendar = Calendar.getInstance().apply {
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }
+    val startMillis = when (selectedPeriod) {
+        "Daily" -> calendar.timeInMillis
+        "Weekly" -> {
+            calendar.add(Calendar.DAY_OF_YEAR, -6)
+            calendar.timeInMillis
+        }
+        "Monthly" -> {
+            calendar.set(Calendar.DAY_OF_MONTH, 1)
+            calendar.timeInMillis
+        }
+        else -> Long.MIN_VALUE
+    }
+    val nowMillis = System.currentTimeMillis()
+    val filteredEntries = moodEntries.filter { entry ->
+        entry.dateMillis in startMillis..nowMillis
+    }
+    val recentEntries = filteredEntries.sortedBy { it.dateMillis }.takeLast(7)
 
 
     val moodScores =
-        recentEntries.map {
-
-            moodToScore(
-                it.mood
-            )
-        }
+        filteredEntries.map { moodToScore(it.mood) }
 
 
     val averageMood =
@@ -103,6 +117,7 @@ fun DataVisualizationScreen(
         modifier =
             Modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(
                     horizontal = 20.dp,
                     vertical = 16.dp
@@ -160,6 +175,25 @@ fun DataVisualizationScreen(
         )
 
 
+        Text(
+            text = "Reporting Period",
+            style = MaterialTheme.typography.titleMedium
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            periods.forEach { period ->
+                FilterChip(
+                    selected = selectedPeriod == period,
+                    onClick = { selectedPeriod = period },
+                    label = { Text(period) }
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+
         MoodSummaryCard(
 
             averageMood =
@@ -187,13 +221,9 @@ fun DataVisualizationScreen(
                 recentEntries
         )
 
+        Spacer(modifier = Modifier.height(16.dp))
 
-        Spacer(
-            modifier =
-                Modifier.height(
-                    16.dp
-                )
-        )
+        MoodDistributionCard(entries = filteredEntries)
 
 
         HeartRateCard()

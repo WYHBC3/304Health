@@ -29,6 +29,8 @@ import com.fit5046.health304.ui.theme._304HealthTheme
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 
 @Composable
 fun DataVisualizationScreen(
@@ -71,6 +73,7 @@ fun DataVisualizationScreen(
         modifier =
             Modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(
                     horizontal = 20.dp,
                     vertical = 16.dp
@@ -136,9 +139,10 @@ fun DataVisualizationScreen(
                 recentEntries
         )
 
-        Spacer(
-            modifier =
-                Modifier.height(16.dp)
+        Spacer(modifier = Modifier.height(16.dp))
+
+        MoodDistributionCard(
+            entries = moodEntries
         )
 
         HeartRateCard()

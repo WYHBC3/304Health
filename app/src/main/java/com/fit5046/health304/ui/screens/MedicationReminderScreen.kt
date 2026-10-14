@@ -39,7 +39,7 @@ import java.util.Locale
 
 /**
  * Form and saved reminder list. Room operations are handled by the route/ViewModel.
- * Notifications will be connected to AlarmManager in the next implementation step.
+ * Saved changes are observed by the application's daily alarm scheduler.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,7 +52,8 @@ fun MedicationReminderScreen(
     onDelete: (MedicationReminder) -> Unit = {},
     onCancel: () -> Unit = {},
     isSaving: Boolean = false,
-    statusMessage: String? = null
+    statusMessage: String? = null,
+    permissionContent: @Composable () -> Unit = {}
 ) {
     var medicationName by rememberSaveable { mutableStateOf(initialReminder?.medicationName.orEmpty()) }
     var reminderEnabled by rememberSaveable { mutableStateOf(initialReminder?.reminderEnabled ?: true) }
@@ -92,6 +93,8 @@ fun MedicationReminderScreen(
 
         Spacer(modifier = Modifier.height(32.dp))
 
+        permissionContent()
+
         OutlinedTextField(
             value = medicationName,
             onValueChange = { medicationName = it },
@@ -105,6 +108,7 @@ fun MedicationReminderScreen(
                 )
             },
             singleLine = true,
+            enabled = !isSaving,
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -116,7 +120,7 @@ fun MedicationReminderScreen(
             readOnly = true,
             label = { Text("Reminder time *") },
             trailingIcon = {
-                TextButton(onClick = { showTimePicker = true }) {
+                TextButton(onClick = { showTimePicker = true }, enabled = !isSaving) {
                     Text("Select")
                 }
             },
@@ -142,6 +146,7 @@ fun MedicationReminderScreen(
                 )
             }
             Switch(
+                enabled = !isSaving,
                 checked = reminderEnabled,
                 onCheckedChange = { reminderEnabled = it }
             )

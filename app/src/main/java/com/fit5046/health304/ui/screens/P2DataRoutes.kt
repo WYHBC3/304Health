@@ -1,5 +1,23 @@
 package com.fit5046.health304.ui.screens
 
+import android.Manifest
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.DisposableEffect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.fit5046.health304.reminders.MedicationAlarmScheduler
+
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -57,6 +75,26 @@ fun MedicationReminderRoute() {
     val model: MedicationReminderViewModel = viewModel()
     val uid by model.userId.collectAsStateWithLifecycle()
     val reminders by model.reminders.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val lifecycle = LocalLifecycleOwner.current
+    val scheduler = remember { MedicationAlarmScheduler(context) }
+    var permissionRevision by remember { mutableIntStateOf(0) }
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        permissionRevision++
+        scheduler.sync(model.reminders.value)
+    }
+    DisposableEffect(lifecycle) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                permissionRevision++
+                scheduler.sync(model.reminders.value)
+            }
+        }
+        lifecycle.lifecycle.addObserver(observer)
+        onDispose { lifecycle.lifecycle.removeObserver(observer) }
+    }
+    val notificationAllowed = remember(permissionRevision) { scheduler.notificationsAllowed() }
+    val exactAllowed = remember(permissionRevision) { scheduler.canScheduleExact() }
     key(uid) {
         val scope = rememberCoroutineScope()
         var editing by remember { mutableStateOf<MedicationReminder?>(null) }
@@ -80,7 +118,12 @@ fun MedicationReminderRoute() {
                             model.save(id, name, hour, minute, enabled)
                             editing = null
                             formVersion++
-                            message = "Reminder saved. Notifications are not enabled yet."
+                            message = when {
+                                !enabled -> "Reminder saved with notifications disabled."
+                                !scheduler.notificationsAllowed() -> "Reminder saved. Enable notifications to receive it."
+                                !scheduler.canScheduleExact() -> "Reminder saved. Allow precise reminders to avoid timing delays."
+                                else -> "Reminder saved. Daily notification scheduled."
+                            }
                         } catch (cancelled: CancellationException) {
                             throw cancelled
                         } catch (error: Exception) {
@@ -89,7 +132,30 @@ fun MedicationReminderRoute() {
                     }
                 },
                 isSaving = saving,
-                statusMessage = message ?: if (uid == null) "Sign in to save your reminders." else null
+                statusMessage = message ?: if (uid == null) "Sign in to save your reminders." else null,
+                permissionContent = {
+                    Column(Modifier.padding(bottom = 12.dp)) {
+                        if (!notificationAllowed) {
+                            Text("Notifications are off. Saved reminders cannot notify you yet.")
+                            TextButton(onClick = {
+                                if (Build.VERSION.SDK_INT >= 33) permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                else context.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                                    .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName))
+                            }) { Text("Enable notifications") }
+                            TextButton(onClick = {
+                                context.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                                    .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName))
+                            }) { Text("Notification settings") }
+                        }
+                        if (!exactAllowed && Build.VERSION.SDK_INT >= 31) {
+                            Text("Precise reminders are off. Notifications may arrive late.")
+                            TextButton(onClick = {
+                                context.startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                                    Uri.parse("package:${context.packageName}")))
+                            }) { Text("Allow precise reminders") }
+                        }
+                    }
+                }
             )
         }
         deleting?.let { reminder ->

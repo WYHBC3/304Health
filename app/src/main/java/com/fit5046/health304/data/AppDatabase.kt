@@ -65,14 +65,23 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Preserve existing app data when P1 adds sensor readings and recommendations.
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS sensor_readings (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, userId TEXT NOT NULL, timestamp INTEGER NOT NULL, heartRate INTEGER NOT NULL, steps INTEGER NOT NULL)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_sensor_readings_userId ON sensor_readings(userId)")
+                db.execSQL("CREATE TABLE IF NOT EXISTS recommendations (userId TEXT NOT NULL PRIMARY KEY, title TEXT NOT NULL, message TEXT NOT NULL, category TEXT NOT NULL, reason TEXT NOT NULL, createdAt INTEGER NOT NULL)")
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
-                val instance = Room.databaseBuilder(
+                val instance = INSTANCE ?: Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,
                     "health304_database"
                 )
-                    .addMigrations(MIGRATION_1_3, MIGRATION_3_4)
+                    .addMigrations(MIGRATION_1_3, MIGRATION_3_4, MIGRATION_4_5)
                     // Team's development fallback for other unsupported schema changes.
                     .fallbackToDestructiveMigration(true)
                     .build()

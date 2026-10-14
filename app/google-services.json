@@ -12,7 +12,44 @@
           "package_name": "com.fit5046.health304"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "339988877164-0a3qh9t2a0fjtffutop9gb3772b11boi.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.fit5046.health304",
+            "certificate_hash": "50c1b2cae98c109e2f6e7da57dce8d3ee724b0cd"
+          }
+        },
+        {
+          "client_id": "339988877164-6mvb13dond29c3lr8ver8f84m10137ne.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.fit5046.health304",
+            "certificate_hash": "4d28ea7ec009c8ff546b8d94f922514532b6f069"
+          }
+        },
+        {
+          "client_id": "339988877164-ioku1nkln8v12ea7t6e8u7rsu88fmd5v.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.fit5046.health304",
+            "certificate_hash": "5f90b39ab80de8181c70813efd71fec670fd4c1b"
+          }
+        },
+        {
+          "client_id": "339988877164-odnnt8p5dt1aepka9dh98l54qukcsbgd.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.fit5046.health304",
+            "certificate_hash": "d6881cd16a7fbef46afe912c5f434b368b21993f"
+          }
+        },
+        {
+          "client_id": "339988877164-tju2s99ar8l1tnum7hqmh7mgtfdtqd47.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCn0zAT692spIxUjMWPGWxTBSJeuHvKNcQ"
@@ -20,7 +57,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "339988877164-tju2s99ar8l1tnum7hqmh7mgtfdtqd47.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

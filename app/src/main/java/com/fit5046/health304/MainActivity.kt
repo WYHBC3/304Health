@@ -4,13 +4,12 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -22,15 +21,13 @@ import com.fit5046.health304.ui.screens.ExerciseLibraryScreen
 import com.fit5046.health304.ui.screens.HomeDashboardScreen
 import com.fit5046.health304.ui.screens.LoginScreen
 import com.fit5046.health304.ui.screens.MedicationReminderRoute
-import com.fit5046.health304.ui.screens.ProfilePreferencesRoute
-import com.fit5046.health304.ui.screens.MoodDiaryEntry
 import com.fit5046.health304.ui.screens.MoodDiaryScreen
+import com.fit5046.health304.ui.screens.ProfilePreferencesRoute
 import com.fit5046.health304.ui.screens.RegisterScreen
 import com.fit5046.health304.ui.screens.SearchDataRoute
-import com.fit5046.health304.ui.screens.createDateMillis
 import com.fit5046.health304.ui.theme._304HealthTheme
-import androidx.activity.viewModels
 import com.fit5046.health304.viewmodel.AuthViewModel
+
 
 class MainActivity : ComponentActivity() {
 
@@ -38,241 +35,350 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         enableEdgeToEdge()
+
         setContent {
+
             _304HealthTheme {
-                AppNavHost(authViewModel)
+
+                AppNavHost(
+                    authViewModel = authViewModel
+                )
             }
         }
     }
 }
 
+
 @Composable
-fun AppNavHost(authViewModel: AuthViewModel) {
+fun AppNavHost(
+    authViewModel: AuthViewModel
+) {
 
-    val navController = rememberNavController()
-
-    /*
-     * Shared prototype data.
-     *
-     * MoodDiary, Home, Search and DataVisualization all use
-     * this same list.
-     */
-    val moodEntries = remember {
-        mutableStateListOf(
-            MoodDiaryEntry(
-                dateMillis = createDateMillis(2026, 9, 8),
-                mood = "Good",
-                factors = listOf("Exercise"),
-                notes = "Had a productive day."
-            ),
-
-            MoodDiaryEntry(
-                dateMillis = createDateMillis(2026, 9, 7),
-                mood = "Neutral",
-                factors = listOf("Sleep"),
-                notes = "Feeling a little tired."
-            ),
-
-            MoodDiaryEntry(
-                dateMillis = createDateMillis(2026, 9, 6),
-                mood = "Stressed",
-                factors = listOf(
-                    "Study / Work",
-                    "Sleep"
-                ),
-                notes = "Busy day with university work."
-            )
-        )
-    }
+    val navController =
+        rememberNavController()
 
     val navBackStackEntry by
     navController.currentBackStackEntryAsState()
 
     val currentRoute =
-        navBackStackEntry?.destination?.route
+        navBackStackEntry
+            ?.destination
+            ?.route
 
     /*
      * Search and visualisation are secondary pages,
      * so the main four-item bottom bar is not changed.
      */
-    val bottomBarRoutes = listOf(
-        "home",
-        "mood",
-        "exercise",
-        "medication"
-    )
+    val bottomBarRoutes =
+        listOf(
+            "home",
+            "mood",
+            "exercise",
+            "medication"
+        )
+
 
     Scaffold(
-        modifier = Modifier.fillMaxSize(),
+
+        modifier =
+            Modifier.fillMaxSize(),
 
         bottomBar = {
 
-            if (currentRoute in bottomBarRoutes) {
+            if (
+                currentRoute in bottomBarRoutes
+            ) {
 
                 BottomNavigationBar(
-                    currentRoute = currentRoute ?: "home",
+
+                    currentRoute =
+                        currentRoute
+                            ?: "home",
 
                     onNavigate = { route ->
 
-                        if (route == "home") {
+                        if (
+                            route == "home"
+                        ) {
 
-                            navController.popBackStack(
-                                route = "home",
-                                inclusive = false
-                            )
+                            navController
+                                .popBackStack(
+                                    route = "home",
+                                    inclusive = false
+                                )
 
                         } else {
 
-                            navController.navigate(route) {
+                            navController
+                                .navigate(route) {
 
-                                popUpTo("home") {
-                                    inclusive = false
+                                    popUpTo("home") {
+                                        inclusive = false
+                                    }
+
+                                    launchSingleTop = true
                                 }
-
-                                launchSingleTop = true
-                            }
                         }
                     }
                 )
             }
         }
+
     ) { innerPadding ->
 
         NavHost(
-            navController = navController,
-            startDestination = if (authViewModel.isLoggedIn) "home" else "login",
-            modifier = Modifier.padding(innerPadding)
+
+            navController =
+                navController,
+
+            startDestination =
+                if (
+                    authViewModel.isLoggedIn
+                ) {
+                    "home"
+                } else {
+                    "login"
+                },
+
+            modifier =
+                Modifier.padding(
+                    innerPadding
+                )
         ) {
 
+
+            /*
+             * Login
+             */
             composable("login") {
+
                 LoginScreen(
-                    authViewModel = authViewModel,
+
+                    authViewModel =
+                        authViewModel,
+
                     onLoginSuccess = {
-                        navController.navigate("home") {
-                            popUpTo("login") { inclusive = true }
-                        }
+
+                        navController
+                            .navigate("home") {
+
+                                popUpTo("login") {
+                                    inclusive = true
+                                }
+                            }
                     },
+
                     onNavigateToRegister = {
-                        navController.navigate("register")
+
+                        navController
+                            .navigate("register")
                     }
                 )
             }
 
+
+            /*
+             * Register
+             */
             composable("register") {
+
                 RegisterScreen(
-                    authViewModel = authViewModel,
+
+                    authViewModel =
+                        authViewModel,
+
                     onRegisterSuccess = {
-                        // Removes both Register and Login from the back stack
-                        navController.navigate("home") {
-                            popUpTo("login") { inclusive = true }
-                        }
+
+                        navController
+                            .navigate("home") {
+
+                                popUpTo("login") {
+                                    inclusive = true
+                                }
+                            }
                     },
+
                     onNavigateToLogin = {
-                        navController.popBackStack()
+
+                        navController
+                            .popBackStack()
                     }
                 )
             }
 
+
+            /*
+             * Home
+             */
             composable("home") {
 
                 HomeDashboardScreen(
-                    moodEntries = moodEntries,
 
                     onMoodClick = {
-                        navController.navigate("mood")
+
+                        navController
+                            .navigate("mood")
                     },
 
                     onViewAllMoodClick = {
-                        navController.navigate("mood")
+
+                        navController
+                            .navigate("mood")
                     },
 
                     onProfileClick = {
-                        navController.navigate("profile")
+
+                        navController
+                            .navigate("profile")
                     },
 
                     onSearchClick = {
-                        navController.navigate("search")
+
+                        navController
+                            .navigate("search")
                     },
 
                     onHealthTrendsClick = {
-                        navController.navigate("visualisation")
+
+                        navController
+                            .navigate(
+                                "visualisation"
+                            )
                     }
                 )
             }
 
+
+            /*
+             * Mood Diary
+             */
             composable("mood") {
 
                 MoodDiaryScreen(
-                    moodEntries = moodEntries,
 
                     onHealthTrendsClick = {
-                        navController.navigate("visualisation")
+
+                        navController
+                            .navigate(
+                                "visualisation"
+                            )
                     }
                 )
             }
 
+
+            /*
+             * Exercise Library
+             */
             composable("exercise") {
+
                 ExerciseLibraryScreen()
             }
 
+
+            /*
+             * Medication
+             */
             composable("medication") {
+
                 MedicationReminderRoute()
             }
 
+
+            /*
+             * Profile
+             */
             composable("profile") {
 
                 ProfilePreferencesRoute(
 
                     onSaved = {
-                        navController.popBackStack()
+
+                        navController
+                            .popBackStack()
                     },
-                    onCancel = { navController.popBackStack() },
+
+                    onCancel = {
+
+                        navController
+                            .popBackStack()
+                    },
 
                     onLogout = {
+
                         authViewModel.logout()
-                        navController.navigate("login") {
-                            popUpTo(0) { inclusive = true }
-                        }
+
+                        navController
+                            .navigate("login") {
+
+                                popUpTo(0) {
+                                    inclusive = true
+                                }
+                            }
                     }
                 )
             }
 
+
+            /*
+             * Health Trends
+             */
             composable("visualisation") {
 
                 DataVisualizationScreen(
-                    moodEntries = moodEntries,
 
                     onBackClick = {
-                        navController.popBackStack()
+
+                        navController
+                            .popBackStack()
                     }
                 )
             }
 
 
+            /*
+             * Search: keep P3 navigation and P4 account-scoped medication data route.
+             */
             composable("search") {
 
                 SearchDataRoute(
-                    moodEntries = moodEntries,
 
                     onBackClick = {
-                        navController.popBackStack()
+
+                        navController
+                            .popBackStack()
                     },
 
                     onMoodClick = {
-                        navController.navigate("mood")
+
+                        navController
+                            .navigate("mood")
                     },
 
                     onMedicationClick = {
-                        navController.navigate("medication")
+
+                        navController
+                            .navigate(
+                                "medication"
+                            )
                     },
 
                     onExerciseClick = {
-                        navController.navigate("exercise")
+
+                        navController
+                            .navigate(
+                                "exercise"
+                            )
                     },
 
                     onHealthDataClick = {
-                        navController.navigate("visualisation")
+
+                        navController
+                            .navigate(
+                                "visualisation"
+                            )
                     }
                 )
             }

@@ -17,7 +17,6 @@ import kotlinx.coroutines.flow.flowOf
 
 @Composable
 fun SearchDataRoute(
-    moodEntries: List<MoodDiaryEntry> = emptyList(),
     onBackClick: () -> Unit = {},
     onMoodClick: () -> Unit = {},
     onMedicationClick: () -> Unit = {},
@@ -52,7 +51,6 @@ fun SearchDataRoute(
         )
 
         SearchScreen(
-            moodEntries = moodEntries,
             medicationReminders = medicationReminders,
             onBackClick = onBackClick,
             onMoodClick = onMoodClick,

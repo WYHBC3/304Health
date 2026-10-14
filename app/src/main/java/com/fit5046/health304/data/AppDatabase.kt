@@ -19,9 +19,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase
     entities = [
         User::class,
         HealthPreferences::class,
-        MedicationReminder::class
+        MedicationReminder::class,
+        MoodEntry::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -29,6 +30,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun userDAO(): UserDAO
     abstract fun healthPreferencesDAO(): HealthPreferencesDAO
     abstract fun medicationReminderDAO(): MedicationReminderDAO
+    abstract fun moodDAO(): MoodDAO
 
     companion object {
         @Volatile
@@ -43,6 +45,22 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Preserve existing P2 user/preferences/medication data on v3 -> v4.
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """CREATE TABLE IF NOT EXISTS mood_entries (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        userId TEXT NOT NULL,
+                        dateMillis INTEGER NOT NULL,
+                        mood TEXT NOT NULL,
+                        factors TEXT NOT NULL,
+                        notes TEXT NOT NULL
+                    )""".trimIndent()
+                )
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -50,7 +68,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "health304_database"
                 )
-                    .addMigrations(MIGRATION_1_3)
+                    .addMigrations(MIGRATION_1_3, MIGRATION_3_4)
                     // Team's development fallback for other unsupported schema changes.
                     .fallbackToDestructiveMigration(true)
                     .build()

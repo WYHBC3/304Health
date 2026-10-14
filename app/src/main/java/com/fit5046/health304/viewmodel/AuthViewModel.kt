@@ -18,6 +18,16 @@ import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.auth.FirebaseAuthWeakPasswordException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import android.content.Context
+import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialCancellationException
+import androidx.credentials.exceptions.NoCredentialException
+import com.fit5046.health304.R
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.google.firebase.auth.FirebaseUser
 
 /**
  * Owns the state of the Login and Register screens.
@@ -83,22 +93,59 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val firebaseUser = authRepository.login(email, password)
 
-                // If this account was created on another device, Room has no row yet
-                if (userRepository.getUser(firebaseUser.uid).first() == null) {
-                    val names = (firebaseUser.displayName ?: "").split(" ", limit = 2)
-                    userRepository.insert(
-                        User(
-                            uid = firebaseUser.uid,
-                            firstName = names.getOrElse(0) { "" },
-                            lastName = names.getOrElse(1) { "" },
-                            email = firebaseUser.email ?: email
-                        )
-                    )
-                }
+                ensureLocalUser(firebaseUser, email)
                 Log.d(TAG, "Login success: uid=${firebaseUser.uid}")
                 onSuccess()
             } catch (e: Exception) {
                 Log.w(TAG, "Login failed", e)
+                errorMessage = toFriendlyMessage(e)
+            } finally {
+                isLoading = false
+            }
+        }
+    }
+
+    /**
+     * Google sign-in in two steps:
+     * 1. Credential Manager shows the Google account picker and returns an ID token
+     * 2. The ID token is exchanged for a Firebase account (AuthRepository)
+     *
+     * `context` must be the Activity, because the account picker is shown on top of it.
+     */
+    fun signInWithGoogle(context: Context, onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            isLoading = true
+            errorMessage = null
+            try {
+                val googleOption = GetSignInWithGoogleOption.Builder(
+                    serverClientId = context.getString(R.string.default_web_client_id)
+                ).build()
+
+                val request = GetCredentialRequest.Builder()
+                    .addCredentialOption(googleOption)
+                    .build()
+
+                val result = CredentialManager.create(context).getCredential(context, request)
+                val credential = result.credential
+
+                if (credential is CustomCredential &&
+                    credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+                ) {
+                    val googleCredential = GoogleIdTokenCredential.createFrom(credential.data)
+                    val firebaseUser = authRepository.loginWithGoogle(googleCredential.idToken)
+                    ensureLocalUser(firebaseUser, googleCredential.id)
+                    Log.d(TAG, "Google sign-in success: uid=${firebaseUser.uid}")
+                    onSuccess()
+                } else {
+                    errorMessage = "Unexpected sign-in response. Please try again."
+                }
+            } catch (e: GetCredentialCancellationException) {
+                // The user closed the account picker: not an error, so show nothing
+                Log.d(TAG, "Google sign-in cancelled by user")
+            } catch (e: NoCredentialException) {
+                errorMessage = "No Google account found on this device. Add one in Settings and try again."
+            } catch (e: Exception) {
+                Log.w(TAG, "Google sign-in failed", e)
                 errorMessage = toFriendlyMessage(e)
             } finally {
                 isLoading = false
@@ -122,6 +169,22 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     fun logout() {
         authRepository.logout()
         Log.d(TAG, "User logged out")
+    }
+
+    // Make sure Room has a profile row for this Firebase account
+    private suspend fun ensureLocalUser(firebaseUser: FirebaseUser, fallbackEmail: String) {
+        if (userRepository.getUser(firebaseUser.uid).first() == null) {
+            val names = (firebaseUser.displayName ?: "").split(" ", limit = 2)
+            userRepository.insert(
+                User(
+                    uid = firebaseUser.uid,
+                    firstName = names.getOrElse(0) { "" },
+                    lastName = names.getOrElse(1) { "" },
+                    email = firebaseUser.email ?: fallbackEmail
+                )
+            )
+            Log.d(TAG, "Local profile created in Room for uid=${firebaseUser.uid}")
+        }
     }
 
     // Turn Firebase exceptions into messages a normal user can understand

@@ -19,6 +19,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -28,44 +29,91 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fit5046.health304.ui.theme._304HealthTheme
+import com.fit5046.health304.viewmodel.MoodViewModel
+import com.google.firebase.auth.FirebaseAuth
+
 
 data class SearchItem(
+
     val title: String,
+
     val type: String,
+
     val description: String
 )
 
+
 @Composable
 fun SearchScreen(
-    moodEntries: List<MoodDiaryEntry> = emptyList(),
+
     onBackClick: () -> Unit = {},
+
     onMoodClick: () -> Unit = {},
+
     onMedicationClick: () -> Unit = {},
+
     onExerciseClick: () -> Unit = {},
-    onHealthDataClick: () -> Unit = {}
+
+    onHealthDataClick: () -> Unit = {},
+
+    moodViewModel: MoodViewModel =
+        viewModel()
+
 ) {
 
-    var searchText by remember {
+    /*
+     * Current Firebase account.
+     */
+    val userId =
+        FirebaseAuth
+            .getInstance()
+            .currentUser
+            ?.uid
+            ?: return
+
+
+    /*
+     * Real Mood Diary data from Room.
+     */
+    val moodEntries by
+    moodViewModel
+        .getMoodEntries(userId)
+        .collectAsState(
+            initial = emptyList()
+        )
+
+
+    var searchText by
+    remember {
         mutableStateOf("")
     }
 
-    var selectedType by remember {
-        mutableStateOf("All")
+
+    var selectedType by
+    remember {
+        mutableStateOf(
+            "All"
+        )
     }
 
+
     /*
-     * Real search results generated from
-     * the shared Mood Diary records.
+     * Convert Room MoodEntry objects
+     * into searchable UI items.
      */
     val moodSearchItems =
+
         moodEntries
             .sortedByDescending {
                 it.dateMillis
             }
-            .map { entry ->
+            .map {
+                    entry ->
 
                 SearchItem(
+
                     title =
                         "${
                             formatDate(
@@ -73,25 +121,33 @@ fun SearchScreen(
                             )
                         } - ${entry.mood}",
 
-                    type = "Mood",
+                    type =
+                        "Mood",
 
                     description =
                         buildString {
 
+                            /*
+                             * factors is stored in Room
+                             * as a comma-separated String.
+                             */
                             if (
                                 entry.factors
-                                    .isNotEmpty()
+                                    .isNotBlank()
                             ) {
 
                                 append(
+
                                     "Factors: ${
                                         entry.factors
+                                            .split(",")
                                             .joinToString(
                                                 ", "
                                             )
                                     }"
                                 )
                             }
+
 
                             if (
                                 entry.notes
@@ -101,17 +157,23 @@ fun SearchScreen(
                                 if (
                                     isNotEmpty()
                                 ) {
-                                    append(" · ")
+
+                                    append(
+                                        " · "
+                                    )
                                 }
+
 
                                 append(
                                     entry.notes
                                 )
                             }
 
+
                             if (
                                 isEmpty()
                             ) {
+
                                 append(
                                     "Mood diary record"
                                 )
@@ -120,15 +182,18 @@ fun SearchScreen(
                 )
             }
 
+
     /*
-     * Other modules do not yet expose
-     * shared record data, so these act
-     * as searchable feature entries.
+     * Other searchable app features.
+     *
+     * These are navigation entries until
+     * their full Room search is connected.
      */
     val appItems =
         listOf(
 
             SearchItem(
+
                 title =
                     "Medication Reminder",
 
@@ -139,7 +204,9 @@ fun SearchScreen(
                     "View and manage your medication reminders."
             ),
 
+
             SearchItem(
+
                 title =
                     "Exercise Library",
 
@@ -150,7 +217,9 @@ fun SearchScreen(
                     "Browse exercises and health activities."
             ),
 
+
             SearchItem(
+
                 title =
                     "Health Trends",
 
@@ -162,38 +231,52 @@ fun SearchScreen(
             )
         )
 
+
     val searchItems =
         moodSearchItems +
                 appItems
 
+
     val filteredItems =
-        searchItems.filter { item ->
+
+        searchItems.filter {
+                item ->
 
             val matchesSearch =
+
                 searchText.isBlank() ||
+
                         item.title.contains(
                             searchText,
                             ignoreCase = true
                         ) ||
+
                         item.type.contains(
                             searchText,
                             ignoreCase = true
                         ) ||
+
                         item.description.contains(
                             searchText,
                             ignoreCase = true
                         )
 
+
             val matchesType =
+
                 selectedType == "All" ||
+
                         item.type ==
                         selectedType
+
 
             matchesSearch &&
                     matchesType
         }
 
+
     LazyColumn(
+
         modifier =
             Modifier
                 .fillMaxSize()
@@ -203,9 +286,15 @@ fun SearchScreen(
                 ),
 
         verticalArrangement =
-            Arrangement.spacedBy(12.dp)
+            Arrangement.spacedBy(
+                12.dp
+            )
     ) {
 
+
+        /*
+         * Header
+         */
         item {
 
             TextButton(
@@ -213,11 +302,16 @@ fun SearchScreen(
                     onBackClick
             ) {
 
-                Text("← Back")
+                Text(
+                    "← Back"
+                )
             }
 
+
             Text(
-                text = "Search",
+
+                text =
+                    "Search",
 
                 style =
                     MaterialTheme
@@ -225,12 +319,17 @@ fun SearchScreen(
                         .headlineMedium
             )
 
+
             Spacer(
                 modifier =
-                    Modifier.height(4.dp)
+                    Modifier.height(
+                        4.dp
+                    )
             )
 
+
             Text(
+
                 text =
                     "Search across your health information",
 
@@ -241,26 +340,35 @@ fun SearchScreen(
             )
         }
 
+
+        /*
+         * Search field
+         */
         item {
 
             OutlinedTextField(
+
                 value =
                     searchText,
 
                 onValueChange = {
-                    searchText = it
+
+                    searchText =
+                        it
                 },
 
                 modifier =
                     Modifier.fillMaxWidth(),
 
                 placeholder = {
+
                     Text(
                         "Search health content..."
                     )
                 },
 
-                singleLine = true,
+                singleLine =
+                    true,
 
                 shape =
                     RoundedCornerShape(
@@ -269,9 +377,14 @@ fun SearchScreen(
             )
         }
 
+
+        /*
+         * Search filters
+         */
         item {
 
             Row(
+
                 modifier =
                     Modifier.fillMaxWidth(),
 
@@ -285,26 +398,34 @@ fun SearchScreen(
                     "All",
                     "Mood",
                     "Medication"
-                ).forEach { type ->
+                ).forEach {
+                        type ->
 
                     FilterChip(
+
                         selected =
                             selectedType ==
                                     type,
 
                         onClick = {
+
                             selectedType =
                                 type
                         },
 
                         label = {
-                            Text(type)
+
+                            Text(
+                                type
+                            )
                         }
                     )
                 }
             }
 
+
             Row(
+
                 modifier =
                     Modifier.fillMaxWidth(),
 
@@ -315,33 +436,40 @@ fun SearchScreen(
             ) {
 
                 FilterChip(
+
                     selected =
                         selectedType ==
                                 "Exercise",
 
                     onClick = {
+
                         selectedType =
                             "Exercise"
                     },
 
                     label = {
+
                         Text(
                             "Exercise"
                         )
                     }
                 )
 
+
                 FilterChip(
+
                     selected =
                         selectedType ==
                                 "Health Data",
 
                     onClick = {
+
                         selectedType =
                             "Health Data"
                     },
 
                     label = {
+
                         Text(
                             "Health Data"
                         )
@@ -350,21 +478,29 @@ fun SearchScreen(
             }
         }
 
+
+        /*
+         * Results title
+         */
         item {
 
             Text(
+
                 text =
                     "Search Results",
 
-                fontSize = 18.sp,
+                fontSize =
+                    18.sp,
 
                 fontWeight =
                     FontWeight.SemiBold
             )
         }
 
+
         if (
-            filteredItems.isEmpty()
+            filteredItems
+                .isEmpty()
         ) {
 
             item {
@@ -375,6 +511,7 @@ fun SearchScreen(
                 ) {
 
                     Text(
+
                         text =
                             "No matching results found.",
 
@@ -395,10 +532,13 @@ fun SearchScreen(
 
             items(
                 filteredItems
-            ) { item ->
+            ) {
+                    item ->
 
                 SearchResultCard(
-                    item = item,
+
+                    item =
+                        item,
 
                     onClick = {
 
@@ -407,15 +547,22 @@ fun SearchScreen(
                         ) {
 
                             "Mood" ->
+
                                 onMoodClick()
 
+
                             "Medication" ->
+
                                 onMedicationClick()
 
+
                             "Exercise" ->
+
                                 onExerciseClick()
 
+
                             "Health Data" ->
+
                                 onHealthDataClick()
                         }
                     }
@@ -423,27 +570,36 @@ fun SearchScreen(
             }
         }
 
+
         item {
 
             Spacer(
                 modifier =
-                    Modifier.height(20.dp)
+                    Modifier.height(
+                        20.dp
+                    )
             )
         }
     }
 }
 
+
 @Composable
 private fun SearchResultCard(
+
     item: SearchItem,
+
     onClick: () -> Unit
+
 ) {
 
     Card(
+
         modifier =
             Modifier
                 .fillMaxWidth()
                 .clickable {
+
                     onClick()
                 },
 
@@ -455,10 +611,13 @@ private fun SearchResultCard(
 
         Column(
             modifier =
-                Modifier.padding(18.dp)
+                Modifier.padding(
+                    18.dp
+                )
         ) {
 
             Text(
+
                 text =
                     item.title,
 
@@ -468,12 +627,17 @@ private fun SearchResultCard(
                         .titleMedium
             )
 
+
             Spacer(
                 modifier =
-                    Modifier.height(5.dp)
+                    Modifier.height(
+                        5.dp
+                    )
             )
 
+
             Text(
+
                 text =
                     item.type,
 
@@ -488,12 +652,17 @@ private fun SearchResultCard(
                         .primary
             )
 
+
             Spacer(
                 modifier =
-                    Modifier.height(8.dp)
+                    Modifier.height(
+                        8.dp
+                    )
             )
 
+
             Text(
+
                 text =
                     item.description,
 
@@ -506,6 +675,7 @@ private fun SearchResultCard(
     }
 }
 
+
 @Preview(
     showBackground = true,
     showSystemUi = true
@@ -513,53 +683,8 @@ private fun SearchResultCard(
 @Composable
 private fun SearchScreenPreview() {
 
-    val previewEntries =
-        listOf(
-            MoodDiaryEntry(
-                dateMillis =
-                    createDateMillis(
-                        2026,
-                        9,
-                        11
-                    ),
-
-                mood =
-                    "Stressed",
-
-                factors =
-                    listOf(
-                        "Study / Work",
-                        "Sleep"
-                    ),
-
-                notes =
-                    "Assignment deadline tomorrow."
-            ),
-
-            MoodDiaryEntry(
-                dateMillis =
-                    createDateMillis(
-                        2026,
-                        9,
-                        10
-                    ),
-
-                mood =
-                    "Very Good",
-
-                factors =
-                    listOf("Exercise"),
-
-                notes =
-                    "Had a great workout."
-            )
-        )
-
     _304HealthTheme {
 
-        SearchScreen(
-            moodEntries =
-                previewEntries
-        )
+        SearchScreen()
     }
 }

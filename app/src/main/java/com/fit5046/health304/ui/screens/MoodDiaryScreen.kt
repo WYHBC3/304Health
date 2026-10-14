@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -27,37 +27,43 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.fit5046.health304.ui.theme._304HealthTheme
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.fit5046.health304.data.MoodEntry
+import com.fit5046.health304.viewmodel.MoodViewModel
+import com.google.firebase.auth.FirebaseAuth
 import java.text.SimpleDateFormat
-import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
-data class MoodDiaryEntry(
-    val dateMillis: Long,
-    val mood: String,
-    val factors: List<String>,
-    val notes: String
-)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MoodDiaryScreen(
-    moodEntries: SnapshotStateList<MoodDiaryEntry>,
-    onHealthTrendsClick: () -> Unit = {}
+    onHealthTrendsClick: () -> Unit = {},
+    moodViewModel: MoodViewModel = viewModel()
 ) {
+
+    // Get the currently signed-in Firebase user's UID.
+    // Each user can only load their own mood records.
+    val userId =
+        FirebaseAuth.getInstance().currentUser?.uid ?: return
+
+    // Room Flow automatically updates this list whenever the database changes.
+    val moodEntries by
+    moodViewModel
+        .getMoodEntries(userId)
+        .collectAsState(initial = emptyList())
 
     val moodOptions = listOf(
         "Very Good",
@@ -101,16 +107,19 @@ fun MoodDiaryScreen(
         mutableStateListOf<String>()
     }
 
-    var editingIndex by remember {
-        mutableStateOf<Int?>(null)
+    // Stores the Room record currently being edited.
+    var editingEntry by remember {
+        mutableStateOf<MoodEntry?>(null)
     }
 
+    // Stores the Room record currently being viewed.
     var viewingEntry by remember {
-        mutableStateOf<MoodDiaryEntry?>(null)
+        mutableStateOf<MoodEntry?>(null)
     }
 
     val formattedDate =
         formatDate(selectedDateMillis)
+
 
     LazyColumn(
         modifier = Modifier
@@ -119,11 +128,11 @@ fun MoodDiaryScreen(
                 horizontal = 24.dp,
                 vertical = 24.dp
             ),
-
         verticalArrangement =
             Arrangement.spacedBy(16.dp)
     ) {
 
+        // Page title
         item {
 
             Text(
@@ -146,6 +155,9 @@ fun MoodDiaryScreen(
                 textAlign = TextAlign.Center
             )
         }
+
+
+        // Health Trends card
         item {
 
             Card(
@@ -160,7 +172,8 @@ fun MoodDiaryScreen(
 
                     Text(
                         text = "Health Trends",
-                        style = MaterialTheme.typography.titleLarge
+                        style =
+                            MaterialTheme.typography.titleLarge
                     )
 
                     Spacer(
@@ -168,8 +181,10 @@ fun MoodDiaryScreen(
                     )
 
                     Text(
-                        text = "See how your mood changes over time and review your health trends.",
-                        style = MaterialTheme.typography.bodyMedium
+                        text =
+                            "See how your mood changes over time and review your health trends.",
+                        style =
+                            MaterialTheme.typography.bodyMedium
                     )
 
                     Spacer(
@@ -182,15 +197,19 @@ fun MoodDiaryScreen(
                             .fillMaxWidth()
                             .height(56.dp)
                     ) {
+
                         Text(
                             text = "View Health Trends",
-                            style = MaterialTheme.typography.titleMedium
+                            style =
+                                MaterialTheme.typography.titleMedium
                         )
                     }
                 }
             }
         }
 
+
+        // Date
         item {
 
             OutlinedTextField(
@@ -217,6 +236,8 @@ fun MoodDiaryScreen(
             )
         }
 
+
+        // Mood dropdown
         item {
 
             ExposedDropdownMenuBox(
@@ -278,6 +299,8 @@ fun MoodDiaryScreen(
             }
         }
 
+
+        // Mood factors
         item {
 
             Text(
@@ -320,8 +343,7 @@ fun MoodDiaryScreen(
                                     if (isChecked) {
 
                                         if (
-                                            factor !in
-                                            selectedFactors
+                                            factor !in selectedFactors
                                         ) {
                                             selectedFactors.add(
                                                 factor
@@ -350,6 +372,8 @@ fun MoodDiaryScreen(
             }
         }
 
+
+        // Notes
         item {
 
             OutlinedTextField(
@@ -372,41 +396,61 @@ fun MoodDiaryScreen(
             )
         }
 
+
+        // Add / Update button
         item {
 
             Button(
                 onClick = {
 
-                    val newEntry =
-                        MoodDiaryEntry(
-                            dateMillis =
-                                selectedDateMillis,
+                    val currentEditingEntry =
+                        editingEntry
 
-                            mood =
-                                selectedMood,
+                    if (currentEditingEntry == null) {
 
-                            factors =
-                                selectedFactors.toList(),
+                        // Create a new Room record.
+                        val newEntry =
+                            MoodEntry(
+                                userId = userId,
+                                dateMillis =
+                                    selectedDateMillis,
+                                mood =
+                                    selectedMood,
 
-                            notes =
-                                notes
-                        )
+                                // Store selected factors as one String.
+                                factors =
+                                    selectedFactors
+                                        .joinToString(","),
 
-                    if (editingIndex == null) {
+                                notes =
+                                    notes
+                            )
 
-                        moodEntries.add(
-                            index = 0,
-                            element = newEntry
-                        )
+                        moodViewModel
+                            .insertMoodEntry(newEntry)
 
                     } else {
 
-                        moodEntries[
-                            editingIndex!!
-                        ] = newEntry
+                        // Keep the existing Room ID when updating.
+                        val updatedEntry =
+                            currentEditingEntry.copy(
+                                dateMillis =
+                                    selectedDateMillis,
+                                mood =
+                                    selectedMood,
+                                factors =
+                                    selectedFactors
+                                        .joinToString(","),
+                                notes =
+                                    notes
+                            )
+
+                        moodViewModel
+                            .updateMoodEntry(updatedEntry)
                     }
 
-                    editingIndex = null
+                    // Clear edit mode and reset the form.
+                    editingEntry = null
 
                     selectedDateMillis =
                         System.currentTimeMillis()
@@ -424,7 +468,7 @@ fun MoodDiaryScreen(
             ) {
 
                 Text(
-                    if (editingIndex == null) {
+                    if (editingEntry == null) {
                         "Add Mood Record"
                     } else {
                         "Update Mood Record"
@@ -433,6 +477,8 @@ fun MoodDiaryScreen(
             }
         }
 
+
+        // Mood History heading
         item {
 
             Spacer(
@@ -446,48 +492,54 @@ fun MoodDiaryScreen(
             )
         }
 
-        itemsIndexed(
-            moodEntries
-        ) { index, entry ->
 
-            Card(
-                modifier = Modifier.fillMaxWidth()
-            ) {
+        // Empty state
+        if (moodEntries.isEmpty()) {
 
-                Column(
+            item {
+
+                Text(
+                    text = "No mood records yet.",
+                    style =
+                        MaterialTheme.typography.bodyMedium,
                     modifier =
-                        Modifier.padding(16.dp)
+                        Modifier.fillMaxWidth(),
+                    textAlign =
+                        TextAlign.Center
+                )
+            }
+
+        } else {
+
+            // Room data
+            items(
+                items = moodEntries,
+                key = { entry ->
+                    entry.id
+                }
+            ) { entry ->
+
+                Card(
+                    modifier =
+                        Modifier.fillMaxWidth()
                 ) {
 
-                    Text(
-                        text =
-                            formatDate(
-                                entry.dateMillis
-                            ),
-
-                        style =
-                            MaterialTheme
-                                .typography
-                                .bodyMedium
-                    )
-
-                    Spacer(
+                    Column(
                         modifier =
-                            Modifier.height(4.dp)
-                    )
-
-                    Text(
-                        text = entry.mood,
-
-                        style =
-                            MaterialTheme
-                                .typography
-                                .titleMedium
-                    )
-
-                    if (
-                        entry.factors.isNotEmpty()
+                            Modifier.padding(16.dp)
                     ) {
+
+                        Text(
+                            text =
+                                formatDate(
+                                    entry.dateMillis
+                                ),
+
+                            style =
+                                MaterialTheme
+                                    .typography
+                                    .bodyMedium
+                        )
 
                         Spacer(
                             modifier =
@@ -495,100 +547,152 @@ fun MoodDiaryScreen(
                         )
 
                         Text(
-                            text =
-                                "Factors: ${
-                                    entry.factors
-                                        .joinToString(", ")
-                                }",
+                            text = entry.mood,
 
                             style =
                                 MaterialTheme
                                     .typography
-                                    .bodySmall
+                                    .titleMedium
                         )
-                    }
 
-                    Spacer(
-                        modifier =
-                            Modifier.height(8.dp)
-                    )
 
-                    Row(
-                        modifier =
-                            Modifier.fillMaxWidth(),
-
-                        horizontalArrangement =
-                            Arrangement.End
-                    ) {
-
-                        TextButton(
-                            onClick = {
-                                viewingEntry = entry
-                            }
+                        if (
+                            entry.factors.isNotBlank()
                         ) {
-                            Text("View")
+
+                            Spacer(
+                                modifier =
+                                    Modifier.height(4.dp)
+                            )
+
+                            Text(
+                                text =
+                                    "Factors: ${
+                                        entry.factors
+                                            .split(",")
+                                            .joinToString(", ")
+                                    }",
+
+                                style =
+                                    MaterialTheme
+                                        .typography
+                                        .bodySmall
+                            )
                         }
 
-                        TextButton(
-                            onClick = {
 
-                                editingIndex =
-                                    index
+                        Spacer(
+                            modifier =
+                                Modifier.height(8.dp)
+                        )
 
-                                selectedDateMillis =
-                                    entry.dateMillis
+                        Row(
+                            modifier =
+                                Modifier.fillMaxWidth(),
 
-                                selectedMood =
-                                    entry.mood
-
-                                selectedFactors.clear()
-
-                                selectedFactors.addAll(
-                                    entry.factors
-                                )
-
-                                notes =
-                                    entry.notes
-                            }
+                            horizontalArrangement =
+                                Arrangement.End
                         ) {
-                            Text("Edit")
-                        }
 
-                        TextButton(
-                            onClick = {
+                            // View record
+                            TextButton(
+                                onClick = {
+                                    viewingEntry =
+                                        entry
+                                }
+                            ) {
+                                Text("View")
+                            }
 
-                                moodEntries
-                                    .removeAt(index)
 
-                                if (
-                                    editingIndex ==
-                                    index
-                                ) {
+                            // Edit record
+                            TextButton(
+                                onClick = {
 
-                                    editingIndex =
-                                        null
+                                    editingEntry =
+                                        entry
+
+                                    selectedDateMillis =
+                                        entry.dateMillis
+
+                                    selectedMood =
+                                        entry.mood
 
                                     selectedFactors.clear()
 
-                                    notes = ""
+                                    if (
+                                        entry.factors
+                                            .isNotBlank()
+                                    ) {
+
+                                        selectedFactors.addAll(
+                                            entry.factors
+                                                .split(",")
+                                        )
+                                    }
+
+                                    notes =
+                                        entry.notes
                                 }
+                            ) {
+                                Text("Edit")
                             }
-                        ) {
-                            Text("Delete")
+
+
+                            // Delete record
+                            TextButton(
+                                onClick = {
+
+                                    moodViewModel
+                                        .deleteMoodEntry(
+                                            entry
+                                        )
+
+                                    // If the deleted record
+                                    // was being edited,
+                                    // reset the form.
+                                    if (
+                                        editingEntry?.id ==
+                                        entry.id
+                                    ) {
+
+                                        editingEntry =
+                                            null
+
+                                        selectedDateMillis =
+                                            System
+                                                .currentTimeMillis()
+
+                                        selectedMood =
+                                            "Good"
+
+                                        selectedFactors
+                                            .clear()
+
+                                        notes = ""
+                                    }
+                                }
+                            ) {
+                                Text("Delete")
+                            }
                         }
                     }
                 }
             }
         }
 
+
         item {
 
             Spacer(
-                modifier = Modifier.height(24.dp)
+                modifier =
+                    Modifier.height(24.dp)
             )
         }
     }
 
+
+    // Date Picker
     if (showDatePicker) {
 
         val datePickerState =
@@ -628,7 +732,8 @@ fun MoodDiaryScreen(
 
                 TextButton(
                     onClick = {
-                        showDatePicker = false
+                        showDatePicker =
+                            false
                     }
                 ) {
                     Text("Cancel")
@@ -642,6 +747,8 @@ fun MoodDiaryScreen(
         }
     }
 
+
+    // View Mood Record dialog
     viewingEntry?.let { entry ->
 
         AlertDialog(
@@ -685,7 +792,8 @@ fun MoodDiaryScreen(
                     Text(
                         text =
                             if (
-                                entry.factors.isEmpty()
+                                entry.factors
+                                    .isBlank()
                             ) {
 
                                 "Factors: None"
@@ -694,6 +802,7 @@ fun MoodDiaryScreen(
 
                                 "Factors: ${
                                     entry.factors
+                                        .split(",")
                                         .joinToString(", ")
                                 }"
                             }
@@ -734,6 +843,7 @@ fun MoodDiaryScreen(
     }
 }
 
+
 fun formatDate(
     dateMillis: Long
 ): String {
@@ -744,107 +854,4 @@ fun formatDate(
     ).format(
         Date(dateMillis)
     )
-}
-
-fun createDateMillis(
-    year: Int,
-    month: Int,
-    day: Int
-): Long {
-
-    return Calendar
-        .getInstance()
-        .apply {
-
-            set(
-                Calendar.YEAR,
-                year
-            )
-
-            set(
-                Calendar.MONTH,
-                month - 1
-            )
-
-            set(
-                Calendar.DAY_OF_MONTH,
-                day
-            )
-
-            set(
-                Calendar.HOUR_OF_DAY,
-                12
-            )
-
-            set(
-                Calendar.MINUTE,
-                0
-            )
-
-            set(
-                Calendar.SECOND,
-                0
-            )
-
-            set(
-                Calendar.MILLISECOND,
-                0
-            )
-
-        }.timeInMillis
-}
-
-@Preview(
-    showBackground = true,
-    showSystemUi = true
-)
-@Composable
-private fun MoodDiaryScreenPreview() {
-
-    val previewEntries =
-        remember {
-            mutableStateListOf(
-                MoodDiaryEntry(
-                    dateMillis =
-                        createDateMillis(
-                            2026,
-                            9,
-                            8
-                        ),
-
-                    mood = "Good",
-
-                    factors =
-                        listOf("Exercise"),
-
-                    notes =
-                        "Had a productive day."
-                ),
-
-                MoodDiaryEntry(
-                    dateMillis =
-                        createDateMillis(
-                            2026,
-                            9,
-                            7
-                        ),
-
-                    mood = "Neutral",
-
-                    factors =
-                        listOf("Sleep"),
-
-                    notes =
-                        "Feeling a little tired."
-                )
-            )
-        }
-
-    _304HealthTheme {
-
-        MoodDiaryScreen(
-            moodEntries =
-                previewEntries
-        )
-    }
 }

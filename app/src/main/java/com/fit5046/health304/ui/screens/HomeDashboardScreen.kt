@@ -27,19 +27,22 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.fit5046.health304.data.WellnessProgress
+import com.fit5046.health304.ui.components.RecommendationCard
 import com.fit5046.health304.ui.theme._304HealthTheme
 import com.fit5046.health304.viewmodel.MoodViewModel
-import com.fit5046.health304.ui.components.RecommendationCard
+import com.fit5046.health304.viewmodel.WellnessProgressViewModel
 import com.google.firebase.auth.FirebaseAuth
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 
 @Composable
@@ -55,13 +58,15 @@ fun HomeDashboardScreen(
 
     onHealthTrendsClick: () -> Unit = {},
 
-    moodViewModel: MoodViewModel = viewModel()
+    moodViewModel: MoodViewModel = viewModel(),
+
+    wellnessProgressViewModel:
+    WellnessProgressViewModel = viewModel()
 
 ) {
 
     /*
-     * Get the current Firebase user.
-     * Mood records are filtered using this UID.
+     * Current Firebase user.
      */
     val userId =
         FirebaseAuth
@@ -72,10 +77,7 @@ fun HomeDashboardScreen(
 
 
     /*
-     * Observe Room data.
-     *
-     * When a Mood record is inserted, updated
-     * or deleted, this list refreshes automatically.
+     * Observe this user's Mood Diary records from Room.
      */
     val moodEntries by
     moodViewModel
@@ -86,50 +88,78 @@ fun HomeDashboardScreen(
 
 
     /*
-     * Daily wellness checklist.
-     *
-     * These values are still local UI state for now.
-     * Room persistence for Daily Wellness Progress
-     * can be added separately.
+     * One daily WellnessProgress row per user.
      */
-    var moodCompleted by
-    remember {
-        mutableStateOf(
-            false
-        )
-    }
+    val todayDateKey =
+        remember {
 
-    var medicationCompleted by
-    remember {
-        mutableStateOf(
-            false
-        )
-    }
+            SimpleDateFormat(
+                "yyyy-MM-dd",
+                Locale.getDefault()
+            ).format(
+                Date()
+            )
+        }
 
-    var exerciseCompleted by
-    remember {
-        mutableStateOf(
-            false
+
+    val savedProgress by
+    wellnessProgressViewModel
+        .getProgress(
+            userId,
+            todayDateKey
         )
-    }
+        .collectAsState(
+            initial = null
+        )
 
 
     /*
-     * A mood record for today means the
-     * mood diary task is completed.
+     * If no progress row exists yet today,
+     * use an empty default object.
      */
-    if (
+    val currentProgress =
+        savedProgress
+            ?: WellnessProgress(
+                userId = userId,
+                dateKey = todayDateKey
+            )
+
+
+    /*
+     * Mood completion is calculated directly
+     * from today's real MoodEntry records.
+     *
+     * Adding today's first Mood -> true.
+     * Deleting today's last Mood -> false.
+     */
+    val moodCompleted =
         moodEntries.any {
+
             isSameDay(
                 it.dateMillis,
                 System.currentTimeMillis()
             )
         }
-    ) {
-        moodCompleted = true
-    }
 
 
+    /*
+     * Medication and Exercise currently do not have
+     * separate completion records elsewhere in the app,
+     * so these two states are stored in WellnessProgress.
+     */
+    val medicationCompleted =
+        currentProgress
+            .medicationCompleted
+
+
+    val exerciseCompleted =
+        currentProgress
+            .exerciseCompleted
+
+
+    /*
+     * Daily progress.
+     */
     val completedTasks =
         listOf(
             moodCompleted,
@@ -145,9 +175,7 @@ fun HomeDashboardScreen(
 
 
     /*
-     * DAO already returns records ordered by
-     * dateMillis DESC, but sorting here also
-     * makes Home independent from DAO ordering.
+     * Real Mood data for Home.
      */
     val latestMoodEntry =
         moodEntries
@@ -341,16 +369,18 @@ fun HomeDashboardScreen(
             )
         }
 
+
         /*
-         * Context-aware recommendation (P1)
+         * P1 context-aware recommendation.
          */
         item {
+
             RecommendationCard()
         }
 
 
         /*
-         * Today's progress
+         * Today's Progress
          */
         item {
 
@@ -690,8 +720,11 @@ fun HomeDashboardScreen(
                                 latestMoodEntry
                                 == null
                             ) {
+
                                 "Add Mood"
+
                             } else {
+
                                 "Update Mood"
                             }
                         )
@@ -730,6 +763,13 @@ fun HomeDashboardScreen(
                         )
                 ) {
 
+
+                    /*
+                     * Mood is automatic.
+                     *
+                     * It is disabled because the value
+                     * comes directly from today's Mood records.
+                     */
                     ChecklistItem(
 
                         text =
@@ -738,12 +778,17 @@ fun HomeDashboardScreen(
                         checked =
                             moodCompleted,
 
-                        onCheckedChange = {
-                            moodCompleted = it
-                        }
+                        enabled =
+                            false,
+
+                        onCheckedChange = {}
                     )
 
 
+                    /*
+                     * Medication is manually completed
+                     * and persisted in Room.
+                     */
                     ChecklistItem(
 
                         text =
@@ -753,13 +798,28 @@ fun HomeDashboardScreen(
                             medicationCompleted,
 
                         onCheckedChange = {
+                                checked ->
 
-                            medicationCompleted =
-                                it
+                            wellnessProgressViewModel
+                                .saveProgress(
+
+                                    currentProgress.copy(
+
+                                        medicationCompleted =
+                                            checked,
+
+                                        updatedAt =
+                                            System.currentTimeMillis()
+                                    )
+                                )
                         }
                     )
 
 
+                    /*
+                     * Exercise is manually completed
+                     * and persisted in Room.
+                     */
                     ChecklistItem(
 
                         text =
@@ -769,9 +829,20 @@ fun HomeDashboardScreen(
                             exerciseCompleted,
 
                         onCheckedChange = {
+                                checked ->
 
-                            exerciseCompleted =
-                                it
+                            wellnessProgressViewModel
+                                .saveProgress(
+
+                                    currentProgress.copy(
+
+                                        exerciseCompleted =
+                                            checked,
+
+                                        updatedAt =
+                                            System.currentTimeMillis()
+                                    )
+                                )
                         }
                     )
                 }
@@ -780,7 +851,7 @@ fun HomeDashboardScreen(
 
 
         /*
-         * Recent Mood
+         * Recent Mood Records
          */
         item {
 
@@ -830,13 +901,16 @@ fun HomeDashboardScreen(
         } else {
 
             items(
+
                 items =
                     recentMoodEntries,
 
                 key = {
                     it.id
                 }
-            ) { entry ->
+
+            ) {
+                    entry ->
 
                 Card(
                     modifier =
@@ -940,6 +1014,8 @@ private fun ChecklistItem(
 
     checked: Boolean,
 
+    enabled: Boolean = true,
+
     onCheckedChange:
         (Boolean) -> Unit
 
@@ -958,6 +1034,9 @@ private fun ChecklistItem(
 
             checked =
                 checked,
+
+            enabled =
+                enabled,
 
             onCheckedChange =
                 onCheckedChange
@@ -979,25 +1058,33 @@ private fun ChecklistItem(
 
 
 /*
- * Used to determine whether a mood record
+ * Used to determine whether a MoodEntry
  * belongs to today.
  */
 private fun isSameDay(
+
     firstMillis: Long,
+
     secondMillis: Long
+
 ): Boolean {
 
     val formatter =
-        java.text.SimpleDateFormat(
+        SimpleDateFormat(
             "yyyyMMdd",
-            java.util.Locale.getDefault()
+            Locale.getDefault()
         )
 
+
     return formatter.format(
-        java.util.Date(firstMillis)
+        Date(
+            firstMillis
+        )
     ) ==
             formatter.format(
-                java.util.Date(secondMillis)
+                Date(
+                    secondMillis
+                )
             )
 }
 

@@ -22,9 +22,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         MedicationReminder::class,
         MoodEntry::class,
         SensorReading::class,
-        Recommendation::class
+        Recommendation::class,
+        WellnessProgress::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -35,6 +36,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun moodDAO(): MoodDAO
     abstract fun sensorReadingDAO(): SensorReadingDAO
     abstract fun recommendationDAO(): RecommendationDAO
+    abstract fun wellnessProgressDAO(): WellnessProgressDAO
 
     companion object {
         @Volatile
@@ -74,6 +76,29 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+
+        // Add Daily Wellness Progress tracking while preserving existing v5 data.
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+
+            override fun migrate(
+                db: SupportSQLiteDatabase
+            ) {
+
+                db.execSQL(
+                    """
+            CREATE TABLE IF NOT EXISTS wellness_progress (
+                userId TEXT NOT NULL,
+                dateKey TEXT NOT NULL,
+                medicationCompleted INTEGER NOT NULL,
+                exerciseCompleted INTEGER NOT NULL,
+                updatedAt INTEGER NOT NULL,
+                PRIMARY KEY(userId, dateKey)
+            )
+            """.trimIndent()
+                )
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = INSTANCE ?: Room.databaseBuilder(
@@ -81,7 +106,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "health304_database"
                 )
-                    .addMigrations(MIGRATION_1_3, MIGRATION_3_4, MIGRATION_4_5)
+                    .addMigrations(MIGRATION_1_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                     // Team's development fallback for other unsupported schema changes.
                     .fallbackToDestructiveMigration(true)
                     .build()

@@ -31,8 +31,8 @@ If another branch adds Room tables, reconcile the combined entities, version and
 
 ## Remaining scheduled work
 
-AlarmManager scheduling/notifications, notification and exact-alarm permissions, cancel/reschedule on edits/deletes, and Logcat evidence are not implemented by this Room change. The saved switch is only a stored setting until AlarmManager is connected.
+14 October update: AlarmManager scheduling/notifications, notification and exact-alarm permission UI, cancel/reschedule on edits/deletes/logout, and Logcat messages are now implemented. See P2-D3-TESTING.md for actual notification delivery verification; that manual check is still pending.
 
-The real Fitbit CSV subset and SensorDataSimulator are also still required. Use real dataset rows, not invented sensor values. Agree the heart-rate/step stream interface with P1 and P4 before integration.
+The real Fitbit CSV subset and SensorDataSimulator are implemented and tested. Production insertion remains pending P1's sensor_readings table/DAO and the steps interpretation. See SENSOR-DATA-SOURCE.md; do not create a duplicate sensor table.
 
 For the AI declaration, record this assistance with Room entities/DAOs, repositories/ViewModels, account filtering, migration, UI wiring and tests, together with your own review and adjustments.

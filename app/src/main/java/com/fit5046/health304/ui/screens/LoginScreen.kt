@@ -34,6 +34,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.fit5046.health304.ui.theme._304HealthTheme
 import com.fit5046.health304.viewmodel.AuthViewModel
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.OutlinedButton
 
 /**
  * Login screen connected to Firebase Authentication through AuthViewModel.
@@ -53,6 +55,9 @@ fun LoginScreen(
         onLoginClick = { email, password ->
             authViewModel.login(email, password, onLoginSuccess)
         },
+        onGoogleClick = {
+            authViewModel.signInWithGoogle(context, onLoginSuccess)
+        },
         onSendResetEmail = { email ->
             authViewModel.sendPasswordReset(email) { message ->
                 Toast.makeText(context, message, Toast.LENGTH_LONG).show()
@@ -69,6 +74,7 @@ fun LoginContent(
     isLoading: Boolean,
     errorMessage: String?,
     onLoginClick: (email: String, password: String) -> Unit,
+    onGoogleClick: () -> Unit,
     onSendResetEmail: (email: String) -> Unit,
     onInputChanged: () -> Unit,
     onNavigateToRegister: () -> Unit
@@ -177,6 +183,27 @@ fun LoginContent(
             }
         }
 
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            HorizontalDivider(modifier = Modifier.weight(1f))
+            Text(
+                text = "  or  ",
+                style = MaterialTheme.typography.bodySmall
+            )
+            HorizontalDivider(modifier = Modifier.weight(1f))
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedButton(
+            onClick = onGoogleClick,
+            enabled = !isLoading,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Continue with Google")
+        }
+
         // Error returned by Firebase (wrong password, no network, ...)
         if (errorMessage != null) {
             Spacer(modifier = Modifier.height(12.dp))
@@ -263,6 +290,7 @@ fun LoginScreenPreview() {
             isLoading = false,
             errorMessage = null,
             onLoginClick = { _, _ -> },
+            onGoogleClick = {},
             onSendResetEmail = {},
             onInputChanged = {},
             onNavigateToRegister = {}

@@ -23,12 +23,11 @@ consumers must handle resets and MUST NOT sum cumulative samples. In interval mo
 summed for the simulated timeline, but repeated cycles are deliberately repeated source observations.
 
 P1 confirmed INTERVAL steps and current insertion timestamps on 14 October.
-Firebase binding always selects INTERVAL. P1 still needs to merge the SensorReading/DAO table.
-The simulator is implemented and tested with an injected persistence callback, but is not yet bound
-in HealthApplication. After the interface is merged, keep one simulator instance in Application and call
-`bindToFirebase { sample -> dao.insert(SensorReading(userId = sample.userId,
-timestamp = sample.timestamp, heartRate = sample.heartRate, steps = sample.steps)) }`.
-Use the actual DAO accessor P1 commits, not a second database or duplicate table.
+Firebase binding always selects INTERVAL. P1's SensorReading/DAO is now merged.
+HealthApplication keeps one simulator and binds it to Firebase using sensorReadingDAO().insert.
+Each row uses the current Firebase UID, current insertion timestamp, real minute-mean heart rate,
+and original minute steps. It shares AppDatabase and does not create a duplicate sensor table.
+AppDatabase migration 4 -> 5 preserves existing users, preferences, medications and moods.
 
 Logout cancels the loop; account switching starts a loop with the new UID. Rebinding the same
 active UID/mode does not launch a second loop. Ordinary process termination stops simulation;

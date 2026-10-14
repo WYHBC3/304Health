@@ -2,6 +2,11 @@ package com.fit5046.health304
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.room.Room
+import com.fit5046.health304.data.AppDatabase
+import com.fit5046.health304.data.SensorReading
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.flow.first
 import com.fit5046.health304.sensors.SensorCsvReader
 import com.fit5046.health304.sensors.SensorDataSimulator
 import com.fit5046.health304.sensors.SimulatedSensorReading
@@ -16,6 +21,28 @@ import java.util.concurrent.TimeUnit
 @RunWith(AndroidJUnit4::class)
 class SensorSimulatorTest {
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
+
+    @Test fun defaultFiveSecondReplayPersistsRawStepsWithCurrentTimestamp() = runBlocking {
+        val db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build()
+        val simulator = SensorDataSimulator(context)
+        val saved = CountDownLatch(1)
+        val started = System.currentTimeMillis()
+        try {
+            simulator.start("test-room-account", StepsMode.INTERVAL) { sample ->
+                db.sensorReadingDAO().insert(SensorReading(userId = sample.userId,
+                    timestamp = sample.timestamp, heartRate = sample.heartRate, steps = sample.steps))
+                saved.countDown()
+            }
+            assertTrue(saved.await(10, TimeUnit.SECONDS))
+            simulator.stop()
+            val row = db.sensorReadingDAO().getLatest("test-room-account", 1).single()
+            assertEquals(102, row.heartRate)
+            assertEquals(17, row.steps)
+            assertTrue(row.timestamp >= started + 5_000)
+            assertEquals(17, db.sensorReadingDAO().observeStepsSince("test-room-account", started).first())
+            assertTrue(db.sensorReadingDAO().getLatest("other-account", 50).isEmpty())
+        } finally { simulator.stop(); db.close() }
+    }
 
     @Test fun realAssetWrapsAndStopCancelsReplayWithoutDuplicateStart() {
         val samples = SensorCsvReader.read(context.assets.open("sensor_data.csv").reader())

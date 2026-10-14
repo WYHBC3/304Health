@@ -33,8 +33,9 @@ Real Kaggle source, extraction and both step interpretations are documented in S
 The simulator exposes an injectable suspend insert callback and optional Firebase session binding.
 It runs every 5 seconds, wraps at the CSV end and logs successful insertions as SensorDataSimulator.
 P1 confirmed raw per-minute INTERVAL steps and current timestamps; Firebase binding now fixes that mode.
-P1's table/DAO is still required before production binding.
-Tests use a collecting callback at an accelerated interval, not the pending sensor_readings table.
+HealthApplication now binds the simulator to P1's sensorReadingDAO().insert after Firebase login.
+Replay tests use an accelerated collecting callback; an additional default-five-second test writes
+to real in-memory Room sensor_readings and verifies raw steps, current timestamps, SUM and isolation.
 
 ## Verification
 
@@ -43,9 +44,13 @@ Run `./gradlew :app:connectedDebugAndroidTest` for real Room and sensor replay t
 Actual OS notification delivery must additionally be confirmed using the signed-in manual demo above.
 
 Verified 14 October: debug build passed; five D3 unit tests passed; six selected emulator tests
-(four Room/migration tests and two sensor replay tests) passed. The simulator's insert callback is
-tested; actual sensor_readings persistence is not yet connected. Junzhe confirmed that the signed-in
+(four Room/migration tests and two sensor replay tests) passed before DAO integration. Junzhe confirmed that the signed-in
 manual notification test passed on 14 October (notification permissions enabled and popup received).
+
+After DAO integration: latest-main debug build and unit tests passed, and all seven selected emulator
+tests passed, including default-five-second insertion into sensor_readings, current timestamps,
+raw minute steps, observeStepsSince SUM and account isolation. Migrations 1/3 -> 5 validate against
+the full combined Room schema without deleting the previous records.
 
 Record AI assistance with these implementations, tests and real-data extraction in the A4 declaration;
 include your review, manual test results, and any changes made after testing.

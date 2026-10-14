@@ -33,7 +33,7 @@ class P2RoomTest {
             legacy.version = 3
         }
         val db = Room.databaseBuilder(context, AppDatabase::class.java, name)
-            .addMigrations(AppDatabase.MIGRATION_3_4).build()
+            .addMigrations(AppDatabase.MIGRATION_3_4, AppDatabase.MIGRATION_4_5).build()
         try {
             assertEquals("Improve sleep", db.healthPreferencesDAO().getPreferences("account-a").first()?.healthGoal)
             assertEquals("Test Vitamin", db.medicationReminderDAO().getReminders("account-a").first().single().medicationName)
@@ -81,7 +81,7 @@ class P2RoomTest {
             legacy.version = 1
         }
         val db = Room.databaseBuilder(context, AppDatabase::class.java, name)
-            .addMigrations(AppDatabase.MIGRATION_1_3, AppDatabase.MIGRATION_3_4).build()
+            .addMigrations(AppDatabase.MIGRATION_1_3, AppDatabase.MIGRATION_3_4, AppDatabase.MIGRATION_4_5).build()
         try {
             assertEquals("Test", db.userDAO().getUser("account-a").first()?.firstName)
             db.healthPreferencesDAO().save(HealthPreferences("account-a", 946684800000L, "Improve sleep", "Low"))

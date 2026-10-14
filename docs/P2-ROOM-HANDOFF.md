@@ -33,6 +33,6 @@ If another branch adds Room tables, reconcile the combined entities, version and
 
 14 October update: AlarmManager scheduling/notifications, notification and exact-alarm permission UI, cancel/reschedule on edits/deletes/logout, and Logcat messages are now implemented. See P2-D3-TESTING.md for actual notification delivery verification; that manual check is still pending.
 
-The real Fitbit CSV subset and SensorDataSimulator are implemented and tested. Production insertion remains pending P1's sensor_readings table/DAO and the steps interpretation. See SENSOR-DATA-SOURCE.md; do not create a duplicate sensor table.
+The real Fitbit CSV subset and SensorDataSimulator are implemented and connected to P1's sensorReadingDAO. The Application binds replay to Firebase login/logout, inserting raw minute steps with current timestamps every five seconds. See SENSOR-DATA-SOURCE.md. Version 4 -> 5 migration preserves existing app data.
 
 For the AI declaration, record this assistance with Room entities/DAOs, repositories/ViewModels, account filtering, migration, UI wiring and tests, together with your own review and adjustments.

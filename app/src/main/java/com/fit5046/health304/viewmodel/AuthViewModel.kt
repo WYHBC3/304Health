@@ -28,6 +28,7 @@ import com.fit5046.health304.R
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.FirebaseUser
+import com.fit5046.health304.worker.WorkScheduler
 
 /**
  * Owns the state of the Login and Register screens.
@@ -76,6 +77,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                     )
                 )
                 Log.d(TAG, "Registered and saved to Room: uid=${firebaseUser.uid}")
+                WorkScheduler.start(getApplication())
                 onSuccess()
             } catch (e: Exception) {
                 Log.w(TAG, "Register failed", e)
@@ -95,6 +97,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
                 ensureLocalUser(firebaseUser, email)
                 Log.d(TAG, "Login success: uid=${firebaseUser.uid}")
+                WorkScheduler.start(getApplication())
                 onSuccess()
             } catch (e: Exception) {
                 Log.w(TAG, "Login failed", e)
@@ -135,6 +138,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                     val firebaseUser = authRepository.loginWithGoogle(googleCredential.idToken)
                     ensureLocalUser(firebaseUser, googleCredential.id)
                     Log.d(TAG, "Google sign-in success: uid=${firebaseUser.uid}")
+                    WorkScheduler.start(getApplication())
                     onSuccess()
                 } else {
                     errorMessage = "Unexpected sign-in response. Please try again."
@@ -167,6 +171,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun logout() {
+        WorkScheduler.stop(getApplication())
         authRepository.logout()
         Log.d(TAG, "User logged out")
     }

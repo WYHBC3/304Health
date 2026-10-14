@@ -31,6 +31,12 @@ import java.util.Date
 import java.util.Locale
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.FilterChip
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import java.util.Calendar
 
 @Composable
 fun DataVisualizationScreen(
@@ -38,18 +44,54 @@ fun DataVisualizationScreen(
     onBackClick: () -> Unit = {}
 ) {
 
-    val recentEntries =
-        moodEntries
-            .sortedBy {
-                it.dateMillis
-            }
-            .takeLast(7)
+
+    // Selected reporting period
+    var selectedPeriod by rememberSaveable {
+        mutableStateOf("All")
+    }
+
+    val periods = listOf(
+        "Daily", "Weekly", "Monthly", "All"
+    )
+
+    // Calculate the beginning of the selected period
+    val calendar = Calendar.getInstance().apply {
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }
+
+    val startMillis = when (selectedPeriod) {
+        "Daily" -> calendar.timeInMillis
+
+        "Weekly" -> {
+            calendar.add(Calendar.DAY_OF_YEAR, -6)
+            calendar.timeInMillis
+        }
+
+        "Monthly" -> {
+            calendar.set(Calendar.DAY_OF_MONTH, 1)
+            calendar.timeInMillis
+        }
+
+        else -> Long.MIN_VALUE
+    }
+
+    // Filter records by the selected date range
+    val filteredEntries = moodEntries.filter { entry ->
+        entry.dateMillis >= startMillis
+    }
+
+    // Show at most 7 points on the line chart
+    val recentEntries = filteredEntries
+        .sortedBy { it.dateMillis }
+        .takeLast(7)
+
 
     val moodScores =
-        recentEntries.map {
-            moodToScore(
-                it.mood
-            )
+        filteredEntries.map {
+            moodToScore(it.mood)
         }
 
     val averageMood =
@@ -118,6 +160,35 @@ fun DataVisualizationScreen(
                 Modifier.height(20.dp)
         )
 
+
+        Text(
+            text = "Reporting Period",
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement =
+                Arrangement.spacedBy(8.dp)
+        ) {
+            periods.forEach { period ->
+                FilterChip(
+                    selected = selectedPeriod == period,
+                    onClick = {
+                        selectedPeriod = period
+                    },
+                    label = {
+                        Text(period)
+                    }
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+
         MoodSummaryCard(
             averageMood =
                 averageMood,
@@ -142,7 +213,7 @@ fun DataVisualizationScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         MoodDistributionCard(
-            entries = moodEntries
+            entries = filteredEntries
         )
 
         HeartRateCard()

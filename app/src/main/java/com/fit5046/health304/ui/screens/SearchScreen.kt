@@ -29,6 +29,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.fit5046.health304.ui.theme._304HealthTheme
+import com.fit5046.health304.data.MedicationReminder
 
 data class SearchItem(
     val title: String,
@@ -39,6 +40,7 @@ data class SearchItem(
 @Composable
 fun SearchScreen(
     moodEntries: List<MoodDiaryEntry> = emptyList(),
+    medicationReminders: List<MedicationReminder> = emptyList(),
     onBackClick: () -> Unit = {},
     onMoodClick: () -> Unit = {},
     onMedicationClick: () -> Unit = {},
@@ -125,6 +127,28 @@ fun SearchScreen(
      * shared record data, so these act
      * as searchable feature entries.
      */
+
+    // Convert actual Room medication records
+    // into searchable items.
+    val medicationSearchItems = medicationReminders.map { reminder ->
+
+        val time = "%02d:%02d".format(
+            reminder.hour,
+            reminder.minute
+        )
+
+        SearchItem(
+            title = reminder.medicationName,
+            type = "Medication",
+            description = "Reminder: $time · " +
+                    if (reminder.reminderEnabled) {
+                        "Enabled"
+                    } else {
+                        "Disabled"
+                    }
+        )
+    }
+
     val appItems =
         listOf(
 
@@ -164,6 +188,7 @@ fun SearchScreen(
 
     val searchItems =
         moodSearchItems +
+                medicationSearchItems +
                 appItems
 
     val filteredItems =

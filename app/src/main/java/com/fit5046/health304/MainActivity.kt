@@ -26,7 +26,7 @@ import com.fit5046.health304.ui.screens.ProfilePreferencesRoute
 import com.fit5046.health304.ui.screens.MoodDiaryEntry
 import com.fit5046.health304.ui.screens.MoodDiaryScreen
 import com.fit5046.health304.ui.screens.RegisterScreen
-import com.fit5046.health304.ui.screens.SearchScreen
+import com.fit5046.health304.ui.screens.SearchDataRoute
 import com.fit5046.health304.ui.screens.createDateMillis
 import com.fit5046.health304.ui.theme._304HealthTheme
 import androidx.activity.viewModels
@@ -249,9 +249,10 @@ fun AppNavHost(authViewModel: AuthViewModel) {
                 )
             }
 
+
             composable("search") {
 
-                SearchScreen(
+                SearchDataRoute(
                     moodEntries = moodEntries,
 
                     onBackClick = {
@@ -275,6 +276,7 @@ fun AppNavHost(authViewModel: AuthViewModel) {
                     }
                 )
             }
+
         }
     }
 }

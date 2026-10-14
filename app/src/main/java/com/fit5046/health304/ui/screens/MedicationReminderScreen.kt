@@ -14,6 +14,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -26,31 +27,38 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.fit5046.health304.ui.theme._304HealthTheme
+import com.fit5046.health304.data.MedicationReminder
 import java.util.Locale
 
 /**
- * Static UI for creating a medication reminder.
- *
- * The prototype includes the required TimePicker and Switch. AlarmManager will
- * be connected in Assessment 4, so saving currently only returns screen values.
+ * Form and saved reminder list. Room operations are handled by the route/ViewModel.
+ * Notifications will be connected to AlarmManager in the next implementation step.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MedicationReminderScreen(
     onSave: (medicationName: String, hour: Int, minute: Int, reminderEnabled: Boolean) -> Unit =
-        { _, _, _, _ -> }
+        { _, _, _, _ -> },
+    initialReminder: MedicationReminder? = null,
+    reminders: List<MedicationReminder> = emptyList(),
+    onEdit: (MedicationReminder) -> Unit = {},
+    onDelete: (MedicationReminder) -> Unit = {},
+    onCancel: () -> Unit = {},
+    isSaving: Boolean = false,
+    statusMessage: String? = null
 ) {
-    var medicationName by remember { mutableStateOf("") }
-    var reminderEnabled by remember { mutableStateOf(true) }
+    var medicationName by rememberSaveable { mutableStateOf(initialReminder?.medicationName.orEmpty()) }
+    var reminderEnabled by rememberSaveable { mutableStateOf(initialReminder?.reminderEnabled ?: true) }
     var showTimePicker by remember { mutableStateOf(false) }
-    var selectedHour by remember { mutableIntStateOf(8) }
-    var selectedMinute by remember { mutableIntStateOf(0) }
+    var selectedHour by rememberSaveable { mutableIntStateOf(initialReminder?.hour ?: 8) }
+    var selectedMinute by rememberSaveable { mutableIntStateOf(initialReminder?.minute ?: 0) }
     var showValidationErrors by remember { mutableStateOf(false) }
     val medicationNameError = showValidationErrors && medicationName.isBlank()
     val selectedTime = String.format(
@@ -77,7 +85,7 @@ fun MedicationReminderScreen(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Set a reminder to take your medication on time",
+            text = "Save and manage your medication reminder times",
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center
         )
@@ -157,9 +165,33 @@ fun MedicationReminderScreen(
                     onSave(medicationName, selectedHour, selectedMinute, reminderEnabled)
                 }
             },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isSaving
         ) {
-            Text("Save Reminder")
+            Text(if (isSaving) "Saving…" else if (initialReminder == null) "Save Reminder" else "Update Reminder")
+        }
+        OutlinedButton(onClick = onCancel, enabled = !isSaving, modifier = Modifier.fillMaxWidth()) {
+            Text(if (initialReminder == null) "Clear Form" else "Cancel Edit")
+        }
+        statusMessage?.let {
+            Text(it, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp))
+        }
+        Spacer(Modifier.height(24.dp))
+        Text("Saved Reminders", style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.fillMaxWidth())
+        if (reminders.isEmpty()) {
+            Text("No saved reminders yet.", modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp))
+        }
+        reminders.forEach { reminder ->
+            Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                Text(reminder.medicationName, style = MaterialTheme.typography.titleSmall)
+                Text(String.format(Locale.getDefault(), "%02d:%02d · %s", reminder.hour, reminder.minute,
+                    if (reminder.reminderEnabled) "Enabled" else "Disabled"))
+                Row {
+                    TextButton(onClick = { onEdit(reminder) }, enabled = !isSaving) { Text("Edit") }
+                    TextButton(onClick = { onDelete(reminder) }, enabled = !isSaving) { Text("Delete") }
+                }
+            }
         }
     }
 

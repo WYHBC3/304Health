@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fit5046.health304.ui.theme._304HealthTheme
 import com.fit5046.health304.viewmodel.MoodViewModel
+import com.fit5046.health304.ui.components.RecommendationCard
 import com.google.firebase.auth.FirebaseAuth
 
 
@@ -338,6 +339,13 @@ fun HomeDashboardScreen(
                         .typography
                         .bodyMedium
             )
+        }
+
+        /*
+         * Context-aware recommendation (P1)
+         */
+        item {
+            RecommendationCard()
         }
 
 

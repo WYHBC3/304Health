@@ -27,6 +27,7 @@ import com.fit5046.health304.ui.screens.RegisterScreen
 import com.fit5046.health304.ui.screens.SearchScreen
 import com.fit5046.health304.ui.theme._304HealthTheme
 import com.fit5046.health304.viewmodel.AuthViewModel
+import com.fit5046.health304.worker.WorkScheduler
 
 
 class MainActivity : ComponentActivity() {
@@ -37,6 +38,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         enableEdgeToEdge()
+
+        if (authViewModel.isLoggedIn) {
+            WorkScheduler.start(this)
+        }
 
         setContent {
 

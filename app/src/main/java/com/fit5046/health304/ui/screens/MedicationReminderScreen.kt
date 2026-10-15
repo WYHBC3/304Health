@@ -204,7 +204,7 @@ fun MedicationReminderScreen(
         val timePickerState = rememberTimePickerState(
             initialHour = selectedHour,
             initialMinute = selectedMinute,
-            is24Hour = false
+            is24Hour = true
         )
 
         TimePickerDialog(

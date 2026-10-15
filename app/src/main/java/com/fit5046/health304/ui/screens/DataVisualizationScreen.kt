@@ -43,6 +43,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import java.util.Calendar
+import androidx.compose.foundation.layout.width
+import com.fit5046.health304.data.SensorReading
+import com.fit5046.health304.viewmodel.SensorViewModel
+import kotlin.math.roundToInt
 
 
 @Composable
@@ -50,7 +54,9 @@ fun DataVisualizationScreen(
 
     onBackClick: () -> Unit = {},
 
-    moodViewModel: MoodViewModel = viewModel()
+    moodViewModel: MoodViewModel = viewModel(),
+
+    sensorViewModel: SensorViewModel = viewModel()
 
 ) {
 
@@ -60,6 +66,7 @@ fun DataVisualizationScreen(
         moodViewModel.getMoodEntries(userId)
     }
     val moodEntries by moodFlow.collectAsState(initial = emptyList())
+    val sensorReadings by sensorViewModel.recentReadings.collectAsState()
 
     // P4: Time range applies to every report component.
     var selectedPeriod by rememberSaveable { mutableStateOf("All") }
@@ -226,7 +233,7 @@ fun DataVisualizationScreen(
         MoodDistributionCard(entries = filteredEntries)
 
 
-        HeartRateCard()
+        HeartRateCard(readings = sensorReadings)
     }
 }
 
@@ -677,195 +684,106 @@ private fun MoodTrendCard(
 }
 
 
+
+/** Heart-rate line chart drawn from the latest simulated wearable readings in Room. */
 @Composable
-private fun HeartRateCard() {
+private fun HeartRateCard(readings: List<SensorReading>) {
+    // Room returns newest first; the chart reads oldest (left) to newest (right)
+    val points = readings.reversed()
+    val latest = readings.firstOrNull()
+    val minHr = points.minOfOrNull { it.heartRate }
+    val maxHr = points.maxOfOrNull { it.heartRate }
+    val timeFormat = remember { SimpleDateFormat("HH:mm:ss", Locale.getDefault()) }
 
     Card(
-
-        modifier =
-            Modifier.fillMaxWidth(),
-
-        shape =
-            RoundedCornerShape(
-                20.dp
-            )
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp)
     ) {
-
-        Column(
-            modifier =
-                Modifier.padding(
-                    20.dp
-                )
-        ) {
-
+        Column(modifier = Modifier.padding(20.dp)) {
             Row(
-
-                modifier =
-                    Modifier.fillMaxWidth(),
-
-                horizontalArrangement =
-                    Arrangement
-                        .SpaceBetween
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-
                 Column {
-
+                    Text("Heart Rate", style = MaterialTheme.typography.titleMedium)
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
-
-                        text =
-                            "Heart Rate",
-
-                        style =
-                            MaterialTheme
-                                .typography
-                                .titleMedium
-                    )
-
-
-                    Spacer(
-                        modifier =
-                            Modifier.height(
-                                4.dp
-                            )
-                    )
-
-
-                    Text(
-
-                        text =
-                            "Simulated sensor data",
-
-                        style =
-                            MaterialTheme
-                                .typography
-                                .bodySmall
+                        text = "Simulated wearable data (Fitbit dataset), last ${points.size} readings",
+                        style = MaterialTheme.typography.bodySmall
                     )
                 }
-
-
-                Column(
-                    horizontalAlignment =
-                        Alignment.End
-                ) {
-
+                Column(horizontalAlignment = Alignment.End) {
                     Text(
-
-                        text =
-                            "72",
-
-                        fontSize =
-                            26.sp,
-
-                        fontWeight =
-                            FontWeight.Bold
+                        text = latest?.heartRate?.toString() ?: "--",
+                        fontSize = 26.sp,
+                        fontWeight = FontWeight.Bold
                     )
-
-
-                    Text(
-
-                        text =
-                            "bpm",
-
-                        style =
-                            MaterialTheme
-                                .typography
-                                .bodySmall
-                    )
+                    Text("bpm", style = MaterialTheme.typography.bodySmall)
                 }
             }
 
+            Spacer(modifier = Modifier.height(18.dp))
 
-            Spacer(
-                modifier =
-                    Modifier.height(
-                        18.dp
-                    )
-            )
-
-
-            Canvas(
-
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(
-                            80.dp
+            if (points.size < 2 || minHr == null || maxHr == null) {
+                Text(
+                    text = "Waiting for sensor readings…",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            } else {
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    // Y-axis labels: highest and lowest bpm in the window
+                    Column(
+                        modifier = Modifier.height(100.dp),
+                        verticalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("$maxHr", style = MaterialTheme.typography.bodySmall)
+                        Text("$minHr", style = MaterialTheme.typography.bodySmall)
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Canvas(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(100.dp)
+                    ) {
+                        val range = (maxHr - minHr).coerceAtLeast(1)
+                        val stepX = size.width / (points.size - 1)
+                        val path = Path()
+                        points.forEachIndexed { index, reading ->
+                            val x = index * stepX
+                            val y = size.height * (1f - (reading.heartRate - minHr).toFloat() / range)
+                            if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                        }
+                        drawPath(
+                            path = path,
+                            color = Color(0xFFD32F2F),
+                            style = Stroke(width = 5f)
                         )
-            ) {
+                    }
+                }
 
-                val path =
-                    Path()
+                Spacer(modifier = Modifier.height(6.dp))
 
+                // X-axis labels: time of the first and last reading
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(timeFormat.format(Date(points.first().timestamp)), style = MaterialTheme.typography.bodySmall)
+                    Text("Time", style = MaterialTheme.typography.bodySmall)
+                    Text(timeFormat.format(Date(points.last().timestamp)), style = MaterialTheme.typography.bodySmall)
+                }
 
-                path.moveTo(
-                    0f,
-                    size.height * 0.60f
-                )
+                Spacer(modifier = Modifier.height(4.dp))
 
-
-                path.lineTo(
-                    size.width * 0.15f,
-                    size.height * 0.60f
-                )
-
-
-                path.lineTo(
-                    size.width * 0.25f,
-                    size.height * 0.20f
-                )
-
-
-                path.lineTo(
-                    size.width * 0.35f,
-                    size.height * 0.75f
-                )
-
-
-                path.lineTo(
-                    size.width * 0.50f,
-                    size.height * 0.50f
-                )
-
-
-                path.lineTo(
-                    size.width * 0.65f,
-                    size.height * 0.55f
-                )
-
-
-                path.lineTo(
-                    size.width * 0.78f,
-                    size.height * 0.25f
-                )
-
-
-                path.lineTo(
-                    size.width,
-                    size.height * 0.58f
-                )
-
-
-                drawPath(
-
-                    path =
-                        path,
-
-                    color =
-                        Color(
-                            0xFFD32F2F
-                        ),
-
-                    style =
-                        Stroke(
-                            width =
-                                5f
-                        )
+                Text(
+                    text = "Average ${points.map { it.heartRate }.average().roundToInt()} bpm · " +
+                            "${points.sumOf { it.steps }} steps in this period",
+                    style = MaterialTheme.typography.bodySmall
                 )
             }
         }
     }
 }
-
 
 private fun moodToScore(
     mood: String
